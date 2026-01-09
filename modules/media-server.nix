@@ -18,7 +18,7 @@ in
     domainBase = lib.mkOption {
       type = lib.types.str;
       default = "media.ccistack.com";
-      description = "Base domain used for vhosts (e.g., jellyfin.${domainBase}).";
+      description = "Base domain used for vhosts (e.g., jellyfin.${cfg.domainBase}).";
     };
     tlsMode = lib.mkOption {
       type = lib.types.enum [ "none" "internal" ];
@@ -113,8 +113,8 @@ in
     ############################
     # Hardware video accel (Intel)
     ############################
-    hardware.opengl.enable = true;
-    hardware.opengl.extraPackages = with pkgs; [ intel-media-driver ];
+    hardware.graphics.enable = true;
+    hardware.graphics.extraPackages = with pkgs; [ intel-media-driver ];
 
     ############################
     # Health

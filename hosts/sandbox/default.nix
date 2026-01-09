@@ -2,19 +2,9 @@
 { pkgs, lib, ... }:
 {
   imports = [ ../../modules/media-server.nix ];
-
-  # LAN networking for Sandbox host
-  networking.interfaces.enp2s0.ipv4.addresses = [{
-    address = "192.168.10.20";
-    prefixLength = 24;
-  }];
-  networking.defaultGateway = "192.168.10.1";
-  networking.nameservers = [ "192.168.10.10" ];
-
-  environment.etc."hosts".text = ''
-    192.168.10.20 jellyfin.kirk-media.ccistack.com
-    192.168.10.20 books.kirk-media.ccistack.com
-  '';
+  
+  networking.hostName = "sandbox-media";       # per-host can override if desired
+  time.timeZone = "America/New_York";
 
   services.mediaServer = {
     enable = true;

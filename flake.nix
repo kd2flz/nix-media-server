@@ -17,7 +17,7 @@
         value = nixpkgs.lib.nixosSystem {
           inherit system;
           modules = [
-            ./profiles/common.nix
+            ./modules/common.nix
             ./hosts/${host}/default.nix
             ./hosts/${host}/hardware.nix
           ];

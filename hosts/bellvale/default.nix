@@ -3,19 +3,18 @@
 {
   imports = [ ../../modules/media-server.nix ];
 
+  networking.hostName = "bel-media";       # per-host can override if desired
+  time.timeZone = "America/New_York";
+  
   # LAN networking for Bellvale host
-  networking.interfaces.enp3s0.ipv4.addresses = [{
-    address = "192.168.1.50";
-    prefixLength = 24;
-  }];
-  networking.defaultGateway = "192.168.1.1";
-  networking.nameservers = [ "192.168.1.1" ];
 
-  # Temporary LAN name resolution until DNS override exists
-  environment.etc."hosts".text = ''
-    192.168.1.50 jellyfin.bel-media.ccistack.com
-    192.168.1.50 books.bel-media.ccistack.com
-  '';
+  networking.networkmanager.enable = true;
+  
+  services.avahi = {
+    enable = true;
+    nssmdns = true;
+    openFirewall = true;
+  };
 
   # Enable the reusable media server module
   services.mediaServer = {

@@ -31,7 +31,7 @@ The core media server configuration is defined in `modules/media-server.nix`. Yo
 
 Each host has its own configuration in the `hosts` directory. For example, `hosts/bellvale/default.nix` and `hosts/bellvale/hardware.nix` define specific settings for the "bellvale" host.
 
-The `profiles/common.nix` file contains common settings applied to all hosts, such as `networking.hostName`, `time.timeZone`, and `users.users.admin` SSH keys.
+The `modules/common.nix` file contains common settings applied to all hosts, such as `networking.hostName`, `time.timeZone`, and `users.users.admin` SSH keys.
 
 ## Deployment
 
@@ -52,7 +52,7 @@ To deploy this media server, you would typically follow these steps:
 
 *   `flake.nix`: The main Nix Flake entry point, defining system configurations for each host.
 *   `modules/media-server.nix`: The core module defining the media server stack (Jellyfin, Audiobookshelf, Caddy, etc.).
-*   `profiles/common.nix`: Common system-wide configurations applied to all hosts.
+*   `modules/common.nix`: Common system-wide configurations applied to all hosts.
 *   `hosts/`: Directory containing host-specific configurations.
     *   `hosts/bellvale/default.nix`: Specific configuration for the 'bellvale' host.
     *   `hosts/bellvale/hardware.nix`: Hardware-specific configuration for the 'bellvale' host.
