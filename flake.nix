@@ -25,16 +25,16 @@
             ./hosts/${host}/default.nix
             ./hosts/${host}/hardware.nix
             comin.nixosModules.comin
-            (
+            {
               services.comin = {
                 enable = true;
                 remotes = [(
                   name = "origin";
                   url = "https://github.com/kd2flz/nix-media-server";
                   branches.main.name = "main";
-                )]
-              }
-            )
+                )];
+              };
+            }
           ];
         };
       }) hostNames);
