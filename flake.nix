@@ -28,10 +28,11 @@
             {
               services.comin = {
                 enable = true;
-                remotes = [(
+                remotes = [{
                   name = "origin";
                   url = "https://github.com/kd2flz/nix-media-server";
                   branches.main.name = "main";
+                }];
                 )];
               };
             }
