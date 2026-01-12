@@ -8,7 +8,7 @@
     isNormalUser = true;
     extraGroups = [ "wheel" "video" ];
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAA...replace-with-your-key"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOL/27STy6kXqS9zF+jnCTgeRJ+wDlHbQzOn7NOKZIw1 P33171-win11"
     ];
   };
 
