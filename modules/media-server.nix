@@ -105,10 +105,10 @@ in
 
       # Turn off ACME/automatic HTTPS so we can start with HTTP cleanly.
       # If you later want internal TLS, flip tlsMode="internal"; the vhost helper adds `tls internal`.
-      enableACME = false;
+      acmeCA = "https://acme-staging-v02.api.letsencrypt.org/directory";
 
       # No global config block needed; keep site blocks only to avoid ordering issues.
-      config = ''
+      extraConfig = ''
         ${vhost "jellyfin.${cfg.domainBase}" "127.0.0.1:8096"}
         ${lib.optionalString cfg.audiobookshelf.enable (vhost "books.${cfg.domainBase}" "127.0.0.1:13378")}
       '';
