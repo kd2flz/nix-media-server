@@ -20,6 +20,11 @@
     nssmdns4 = true;
     openFirewall = true;
   };
+  
+  # Add System packages
+  environment.systemPackages = with pkgs; [
+    w3m
+  ]
 
   # Allow unfree packages
     nixpkgs.config.allowUnfree = true;
