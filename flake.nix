@@ -43,30 +43,6 @@
                   branches.main.name = "main";
                   # Optionally: poller.period = 60; # seconds (default 60)
                 }];
-
-                # Optional: explicitly set which flake output to use.
-                # If omitted, comin uses the machine's hostname by default.
-                # hostname = host;
-
-                # Optional: for a testing branch per host (great for your sandbox)
-                # remotes = [{
-                #   name = "origin";
-                #   url = "https://github.com/kd2flz/nix-media-server.git";
-                #   branches = {
-                #     main.name = "main";
-                #     testing.name = "testing-${host}";
-                #   };
-                # }];
-
-                # Optional safety gate (uncomment when you add the script)
-                # buildConfirmer = {
-                #   enable = true;
-                #   command = "/etc/comin/build-confirm.sh";
-                #   timeout = 30;
-                # };
-
-                # Optional: if your flake lives in a subdirectory
-                # flakeSubdirectory = ".";
               };
             }
           ];
