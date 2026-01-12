@@ -12,6 +12,12 @@
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOL/27STy6kXqS9zF+jnCTgeRJ+wDlHbQzOn7NOKZIw1 P33171-win11"
     ];
   };
+  
+  users.users.local = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "video" ];
+    initialPassword = "pleasechangeme";
+  };
 
   # LAN networking
   networking.networkmanager.enable = true;
