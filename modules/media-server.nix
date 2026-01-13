@@ -72,24 +72,26 @@ in
     ############################
     #
 
-    services.jellyfin = lib.mkIf cfg.jellyfin.enable {
-      enable = true;
-      dataDir = "/var/lib/jellyfin";
-      openFirewall = true;
-    };
+    (lib.optionalAttrs cfg.jellyfin.enable {
+      services.jellyfin = {
+        enable = true;
+        dataDir = "/var/lib/jellyfin";
+        openFirewall = false;
+      };
 
-    # Ensure Jellyfin can read media
-    users.users.jellyfin = lib.mkIf cfg.jellyfin.enable {
-      isSystemUser = true;
-      extraGroups = [ "media" ];
-    };
-
+      # Ensure Jellyfin can read media
+      users.users.jellyfin = {
+        isSystemUser = true;
+        extraGroups = [ "media" ];
+      };
+    }
     environment.systemPackages = lib.mkIf cfg.jellyfin.enable [
         pkgs.jellyfin
         pkgs.jellyfin-web
         pkgs.jellyfin-ffmpeg
       ];
     };
+    )
 
     ############################
     # Audiobookshelf (Podman)
