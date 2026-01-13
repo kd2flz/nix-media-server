@@ -42,7 +42,13 @@ in
     audiobookshelf.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Enable Audiobookshelf container.";
+      description = "Enable Audiobookshelf Module.";
+    };
+
+    jellyfin.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable Jellyfin Module.";
     };
 
     # Add more toggles later (e.g., Navidrome) without breaking API clients.
@@ -64,17 +70,26 @@ in
     ############################
     # Jellyfin
     ############################
-    services.jellyfin = {
+    #
+
+    services.jellyfin = lib.mkIf cfg.jellyfin.enable {
       enable = true;
       dataDir = "/var/lib/jellyfin";
-      openFirewall = false;
+      openFirewall = true;
     };
 
     # Ensure Jellyfin can read media
-    users.users.jellyfin = {
+    users.users.jellyfin = lib.mkIf cfg.jellyfin.enable {
       isSystemUser = true;
       extraGroups = [ "media" ];
     };
+
+    environment.systemPackages = lib.mkIf cfg.jellyfin.enable [
+        pkgs.jellyfin
+        pkgs.jellyfin-web
+        pkgs.jellyfin-ffmpeg
+      ];
+    }
 
     ############################
     # Audiobookshelf (Podman)

@@ -19,5 +19,6 @@
     };
 
     audiobookshelf.enable = true;
+    jellyfin.enable = true;
   };
 }
