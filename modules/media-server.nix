@@ -112,24 +112,18 @@ in
     ########################################
     # Caddy reverse proxy (HTTP only by default)
     ########################################
+    
     services.caddy = {
       enable = true;
-
-      # Never reuse autosaved state; always use the generated Caddyfile
       resume = false;
-
-      # Disable automatic HTTPS/ACME globally
-      globalConfig = "{ auto_https off }";
-
-      # Explicitly force HTTP for LAN hostnames
       extraConfig = ''
-        http://jellyfin.${cfg.domainBase} {
-          ${lib.optionalString (cfg.tlsMode == "internal") "tls internal"}
+        jellyfin.${cfg.domainBase} {
+          tls internal
           reverse_proxy 127.0.0.1:8096
         }
         ${lib.optionalString cfg.audiobookshelf.enable ''
-        http://books.${cfg.domainBase} {
-          ${lib.optionalString (cfg.tlsMode == "internal") "tls internal"}
+        books.${cfg.domainBase} {
+          tls internal
           reverse_proxy 127.0.0.1:13378
         }''}
       '';
