@@ -117,6 +117,12 @@ in
       enable = true;
       resume = false;
       extraConfig = ''
+        {
+           admin off
+           pki {
+             install_trust false
+           }         
+        }
         jellyfin.${cfg.domainBase} {
           tls internal
           reverse_proxy 127.0.0.1:8096
