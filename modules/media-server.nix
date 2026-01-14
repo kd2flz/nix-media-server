@@ -112,17 +112,22 @@ in
     ########################################
     # Caddy reverse proxy (HTTP only by default)
     ########################################
-    
+
+
     services.caddy = {
       enable = true;
       resume = false;
-      extraConfig = ''
+
+      # Global block: must be first
+      globalConfig = ''
         {
-           admin off
-           pki {
-             install_trust false
-           }         
+          pki {
+            install_trust false
+          }
         }
+      '';
+
+      extraConfig = ''
         jellyfin.${cfg.domainBase} {
           tls internal
           reverse_proxy 127.0.0.1:8096
@@ -134,6 +139,7 @@ in
         }''}
       '';
     };
+
 
     ########################################
     # Firewall
