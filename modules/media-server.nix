@@ -39,7 +39,7 @@ in
         video = "/srv/media/video";
         audiobooks = "/srv/media/audiobooks";
       };
-      description = "Media paths for libraries.";
+      description = "Media paths for libraries (created once, manually).";
     };
 
     audiobookshelf.enable = lib.mkOption {
@@ -61,40 +61,9 @@ in
   config = lib.mkIf cfg.enable {
 
     ########################################
-    # Groups / base folders
+    # Groups / base identity
     ########################################
     users.groups.media = { };
-
-    # SINGLE assignment: declare tmpfiles rules and add conditionals with optionals
-
-    systemd.tmpfiles.rules =
-      [
-        "d ${cfg.paths.root} 0755 root root - -"
-        "d ${cfg.paths.music} 0755 root media - -"
-        "d ${cfg.paths.video} 0755 root media - -"
-        "d ${cfg.paths.audiobooks} 0755 root media - -"
-      ]
-      ++ lib.optionals cfg.audiobookshelf.enable [
-        "d /var/lib/audiobookshelf 0755 root root - -"
-      ];
-
-    system.activationScripts.mediaTmpfiles = {
-      deps = [ "specialfs" ];
-      supportsDryActivation = true;
-      text = ''
-        ${pkgs.systemd}/bin/systemd-tmpfiles --create --remove --exclude-prefix=/dev || true
-      '';
-    };
-
-
-    # Deterministic tmpfiles on every activation (Comin test & main switch)
-    system.activationScripts.mediaTmpfiles = {
-      deps = [ "specialfs" ];
-      supportsDryActivation = true;
-      text = ''
-        ${pkgs.systemd}/bin/systemd-tmpfiles --create --remove --exclude-prefix=/dev || true
-      '';
-    };
 
     ########################################
     # Virtualisation (Podman for Audiobookshelf)
@@ -102,7 +71,7 @@ in
     virtualisation.podman.enable = true;
 
     ########################################
-    # Jellyfin (service + user + directories via module options)
+    # Jellyfin (use upstream module; no tmpfiles logic here)
     ########################################
     users.groups.jellyfin = lib.mkIf cfg.jellyfin.enable { };
 
@@ -115,16 +84,7 @@ in
     services.jellyfin = lib.mkIf cfg.jellyfin.enable {
       enable = true;
       openFirewall = true;
-
-      # Use the module's own options (valid) to set paths and identity
-      user = "jellyfin";
-      group = "jellyfin";
-      dataDir   = "/var/lib/jellyfin";
-      configDir = "/var/lib/jellyfin/config";
-      cacheDir  = "/var/cache/jellyfin";
-      logDir    = "/var/lib/jellyfin/log";
     };
-    # (These options are part of the NixOS Jellyfin module; there is no 'serviceConfig' under services.jellyfin) [1](https://mynixos.com/options/services.jellyfin)[2](https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/services/misc/jellyfin.nix)
 
     # Optional: provide the ffmpeg build Jellyfin expects
     environment.systemPackages = lib.mkIf cfg.jellyfin.enable (with pkgs; [
@@ -150,15 +110,15 @@ in
     };
 
     ########################################
-    # Caddy reverse proxy (LAN-first)
+    # Caddy reverse proxy (HTTP only by default)
     ########################################
     services.caddy = {
       enable = true;
 
-      # Do not resume any previously autosaved config; always use our Caddyfile
+      # Never reuse autosaved state; always use the generated Caddyfile
       resume = false;
 
-      # Global: no automatic HTTPS/ACME
+      # Disable automatic HTTPS/ACME globally
       globalConfig = "{ auto_https off }";
 
       # Explicitly force HTTP for LAN hostnames
@@ -174,7 +134,6 @@ in
         }''}
       '';
     };
-    # Caddy module exposes globalConfig/extraConfig/virtualHosts/etc.; there is no 'enableACME' boolean here. [4](https://www.mankier.com/8/nixos-rebuild)
 
     ########################################
     # Firewall
