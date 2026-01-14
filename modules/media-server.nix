@@ -113,11 +113,10 @@ in
     # Caddy reverse proxy (HTTP only by default)
     ########################################
 
-
     services.caddy = {
       enable = true;
       resume = false;
-
+    
       # Global block: must be first
       globalConfig = ''
         {
@@ -126,7 +125,7 @@ in
           }
         }
       '';
-
+    
       extraConfig = ''
         jellyfin.${cfg.domainBase} {
           tls internal
@@ -139,6 +138,7 @@ in
         }''}
       '';
     };
+
 
 
     ########################################
