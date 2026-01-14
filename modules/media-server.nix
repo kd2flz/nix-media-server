@@ -113,24 +113,39 @@ in
     # Caddy reverse proxy (HTTP only by default)
     ########################################
 
+    
     services.caddy = {
       enable = true;
       resume = false;
     
-      # Global block: must be first
+      # Global block — FIRST in file, and only once
       globalConfig = ''
         {
           pki {
             install_trust false
           }
+    
+          # Optional: global logging (use `logging`, not `log`)
+          #logging {
+           # logs {
+            #  default {
+             #   level ERROR
+                # Example outputs:
+                # output discard
+                # output file /var/log/caddy/access.log
+              #}
+            #}
+          #}
         }
       '';
     
+      # Site blocks only
       extraConfig = ''
         jellyfin.${cfg.domainBase} {
           tls internal
           reverse_proxy 127.0.0.1:8096
         }
+    
         ${lib.optionalString cfg.audiobookshelf.enable ''
         books.${cfg.domainBase} {
           tls internal
@@ -138,6 +153,7 @@ in
         }''}
       '';
     };
+
 
 
 
