@@ -65,13 +65,17 @@ in
     ########################################
     users.groups.media = { };
 
-    # Ensure media roots exist; owned by root, group media for read
-    systemd.tmpfiles.rules = [
-      "d ${cfg.paths.root} 0755 root root - -"
-      "d ${cfg.paths.music} 0755 root media - -"
-      "d ${cfg.paths.video} 0755 root media - -"
-      "d ${cfg.paths.audiobooks} 0755 root media - -"
-    ] ++ lib.optional cfg.audiobookshelf.enable "d /var/lib/audiobookshelf 0755 root root - -";
+    # SINGLE assignment: declare tmpfiles rules and add conditionals with optionals
+    systemd.tmpfiles.rules =
+      [
+        "d ${cfg.paths.root} 0755 root root - -"
+        "d ${cfg.paths.music} 0755 root media - -"
+        "d ${cfg.paths.video} 0755 root media - -"
+        "d ${cfg.paths.audiobooks} 0755 root media - -"
+      ]
+      ++ lib.optionals cfg.audiobookshelf.enable [
+        "d /var/lib/audiobookshelf 0755 root root - -"
+      ];
 
     # Deterministic tmpfiles on every activation (Comin test & main switch)
     system.activationScripts.mediaTmpfiles = {
@@ -100,7 +104,7 @@ in
 
     services.jellyfin = lib.mkIf cfg.jellyfin.enable {
       enable = true;
-      openFirewall = false;
+      openFirewall = true;
 
       # Let systemd create/own runtime directories for Jellyfin
       serviceConfig = {
@@ -145,10 +149,11 @@ in
     services.caddy = {
       enable = true;
 
-      # We are LAN-only; keep ACME off. For internal TLS, set tlsMode="internal".
-      enableACME = false;
+      # Disable automatic HTTPS globally (avoids the ordering constraints);
+      # Use tlsMode="internal" if you want Caddy internal CA later.
+      globalConfig = "{ auto_https off }";  # valid Caddy module option in NixOS
+      # (There's no services.caddy.enableACME option; that's an Nginx virtualHost option.) [2](https://mynixos.com/options/services.caddy)[3](https://aux-docs.pyrox.pages.gay/NixOS/services/caddy/)
 
-      # No global block; just site blocks to avoid ordering issues.
       extraConfig = ''
         ${lib.optionalString cfg.jellyfin.enable (vhost "jellyfin.${cfg.domainBase}" "127.0.0.1:8096")}
         ${lib.optionalString cfg.audiobookshelf.enable (vhost "books.${cfg.domainBase}" "127.0.0.1:13378")}
@@ -166,7 +171,6 @@ in
     ########################################
     # Hardware video accel (Intel)
     ########################################
-
     hardware.graphics.enable = true;
     hardware.graphics.extraPackages = with pkgs; [ intel-media-driver ];
 
