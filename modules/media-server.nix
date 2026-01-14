@@ -75,6 +75,12 @@ in
       ]
       ++ lib.optionals cfg.audiobookshelf.enable [
         "d /var/lib/audiobookshelf 0755 root root - -"
+      ]
+      ++ lib.optionals cfg.jellyfin.enable [
+        "d /var/lib/jellyfin 0755 jellyfin jellyfin - -"
+        "d /var/lib/jellyfin/config 0755 jellyfin jellyfin - -"
+        "d /var/lib/jellyfin/log 0755 jellyfin jellyfin - -"
+        "d /var/cache/jellyfin 0755 jellyfin jellyfin - -"
       ];
 
     # Deterministic tmpfiles on every activation (Comin test & main switch)
@@ -92,7 +98,7 @@ in
     virtualisation.podman.enable = true;
 
     ########################################
-    # Jellyfin (service + user + systemd-managed dirs)
+    # Jellyfin (service + user + directories via module options)
     ########################################
     users.groups.jellyfin = lib.mkIf cfg.jellyfin.enable { };
 
@@ -106,19 +112,15 @@ in
       enable = true;
       openFirewall = true;
 
-      # Let systemd create/own runtime directories for Jellyfin
-      serviceConfig = {
-        User = "jellyfin";
-        Group = "jellyfin";
-
-        # These create and chown the directories before the service starts
-        StateDirectory = "jellyfin";  # -> /var/lib/jellyfin
-        CacheDirectory = "jellyfin";  # -> /var/cache/jellyfin
-        LogsDirectory  = "jellyfin";  # -> /var/log/jellyfin
-
-        UMask = "0022";
-      };
+      # Use the module's own options (valid) to set paths and identity
+      user = "jellyfin";
+      group = "jellyfin";
+      dataDir   = "/var/lib/jellyfin";
+      configDir = "/var/lib/jellyfin/config";
+      cacheDir  = "/var/cache/jellyfin";
+      logDir    = "/var/lib/jellyfin/log";
     };
+    # (These options are part of the NixOS Jellyfin module; there is no 'serviceConfig' under services.jellyfin) [1](https://mynixos.com/options/services.jellyfin)[2](https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/services/misc/jellyfin.nix)
 
     # Optional: provide the ffmpeg build Jellyfin expects
     environment.systemPackages = lib.mkIf cfg.jellyfin.enable (with pkgs; [
@@ -149,16 +151,26 @@ in
     services.caddy = {
       enable = true;
 
-      # Disable automatic HTTPS globally (avoids the ordering constraints);
-      # Use tlsMode="internal" if you want Caddy internal CA later.
-      globalConfig = "{ auto_https off }";  # valid Caddy module option in NixOS
-      # (There's no services.caddy.enableACME option; that's an Nginx virtualHost option.) [2](https://mynixos.com/options/services.caddy)[3](https://aux-docs.pyrox.pages.gay/NixOS/services/caddy/)
+      # Do not resume any previously autosaved config; always use our Caddyfile
+      resume = false;
 
+      # Global: no automatic HTTPS/ACME
+      globalConfig = "{ auto_https off }";
+
+      # Explicitly force HTTP for LAN hostnames
       extraConfig = ''
-        ${lib.optionalString cfg.jellyfin.enable (vhost "jellyfin.${cfg.domainBase}" "127.0.0.1:8096")}
-        ${lib.optionalString cfg.audiobookshelf.enable (vhost "books.${cfg.domainBase}" "127.0.0.1:13378")}
+        http://jellyfin.${cfg.domainBase} {
+          ${lib.optionalString (cfg.tlsMode == "internal") "tls internal"}
+          reverse_proxy 127.0.0.1:8096
+        }
+        ${lib.optionalString cfg.audiobookshelf.enable ''
+        http://books.${cfg.domainBase} {
+          ${lib.optionalString (cfg.tlsMode == "internal") "tls internal"}
+          reverse_proxy 127.0.0.1:13378
+        }''}
       '';
     };
+    # Caddy module exposes globalConfig/extraConfig/virtualHosts/etc.; there is no 'enableACME' boolean here. [4](https://www.mankier.com/8/nixos-rebuild)
 
     ########################################
     # Firewall
