@@ -9,7 +9,7 @@
   services.mediaServer = {
     enable = true;
     domainBase = "sandbox-media.ccistack.com"; # site-specific base domain
-    tlsMode = "none";                        # or "internal" if you want internal CA
+    tlsMode = "internal";                        # or "internal" if you want internal CA
 
     paths = {
       root = "/srv/media";
