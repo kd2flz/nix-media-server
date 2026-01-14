@@ -66,6 +66,7 @@ in
     users.groups.media = { };
 
     # SINGLE assignment: declare tmpfiles rules and add conditionals with optionals
+
     systemd.tmpfiles.rules =
       [
         "d ${cfg.paths.root} 0755 root root - -"
@@ -75,13 +76,16 @@ in
       ]
       ++ lib.optionals cfg.audiobookshelf.enable [
         "d /var/lib/audiobookshelf 0755 root root - -"
-      ]
-      ++ lib.optionals cfg.jellyfin.enable [
-        "d /var/lib/jellyfin 0755 jellyfin jellyfin - -"
-        "d /var/lib/jellyfin/config 0755 jellyfin jellyfin - -"
-        "d /var/lib/jellyfin/log 0755 jellyfin jellyfin - -"
-        "d /var/cache/jellyfin 0755 jellyfin jellyfin - -"
       ];
+
+    system.activationScripts.mediaTmpfiles = {
+      deps = [ "specialfs" ];
+      supportsDryActivation = true;
+      text = ''
+        ${pkgs.systemd}/bin/systemd-tmpfiles --create --remove --exclude-prefix=/dev || true
+      '';
+    };
+
 
     # Deterministic tmpfiles on every activation (Comin test & main switch)
     system.activationScripts.mediaTmpfiles = {
