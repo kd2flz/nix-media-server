@@ -1,9 +1,10 @@
+
 { lib, config, pkgs, ... }:
 
 let
   cfg = config.services.mediaServer;
 
-  # Render a caddy vhost with optional internal TLS (no global block required)
+  # Render a Caddy vhost with optional internal TLS (no global block required)
   vhost = host: upstream: ''
     ${host} {
       ${lib.optionalString (cfg.tlsMode == "internal") "tls internal"}
@@ -52,46 +53,66 @@ in
   };
 
   config = {
-    # Users and groups are defined unconditionally, but their use might be conditional.
-    users.groups.media = lib.mkIf cfg.enable {};
+    ########################################
+    # Base users/groups & tmpfiles
+    ########################################
+    users.groups.media = lib.mkIf cfg.enable { };
 
-    # Tmpfiles rules are mostly unconditional for base paths,
-    # but specific service paths are conditional.
+    # Ensure media roots always exist (owned by root; group media for read)
     systemd.tmpfiles.rules = lib.mkIf cfg.enable ([
       "d ${cfg.paths.root} 0755 root root - -"
       "d ${cfg.paths.music} 0755 root media - -"
       "d ${cfg.paths.video} 0755 root media - -"
       "d ${cfg.paths.audiobooks} 0755 root media - -"
-    ] ++ lib.optional cfg.audiobookshelf.enable "d /var/lib/audiobookshelf 0755 root root - -");
+    ]
+    ++ lib.optional cfg.audiobookshelf.enable "d /var/lib/audiobookshelf 0755 root root - -"
+    );
 
-    ############################
+    ########################################
     # Virtualisation (Podman)
-    ############################
+    ########################################
     virtualisation.podman.enable = lib.mkIf cfg.enable true;
 
-    ############################
-    # Jellyfin
-    ############################
-    services.jellyfin = lib.mkIf (cfg.enable && cfg.jellyfin.enable) {
-      enable = true; # Enables the Jellyfin service itself
-      dataDir = "/var/lib/jellyfin";
-      openFirewall = false;
-    };
+    ########################################
+    # Jellyfin (service + user + directories)
+    ########################################
+    users.groups.jellyfin = lib.mkIf (cfg.enable && cfg.jellyfin.enable) { };
 
     users.users.jellyfin = lib.mkIf (cfg.enable && cfg.jellyfin.enable) {
       isSystemUser = true;
-      extraGroups = [ "media" ];
+      group = "jellyfin";
+      extraGroups = [ "media" ];         # allows reading /srv/media/*
     };
 
-    environment.systemPackages = lib.mkIf (cfg.enable && cfg.jellyfin.enable) (with pkgs; [
-      jellyfin
-      jellyfin-web
-      jellyfin-ffmpeg
+    # Create and chown Jellyfin’s working directories at build-time
+    systemd.tmpfiles.rules = lib.mkIf (cfg.enable && cfg.jellyfin.enable) ([
+      "d /var/lib/jellyfin 0755 jellyfin jellyfin - -"
+      "d /var/lib/jellyfin/config 0755 jellyfin jellyfin - -"
+      "d /var/lib/jellyfin/log 0755 jellyfin jellyfin - -"
+      "d /var/cache/jellyfin 0755 jellyfin jellyfin - -"
     ]);
 
-    ############################
+    services.jellyfin = lib.mkIf (cfg.enable && cfg.jellyfin.enable) {
+      enable = true;
+      dataDir   = "/var/lib/jellyfin";
+      # cacheDir = "/var/cache/jellyfin";   # uncomment if you want to force this
+      # logDir   = "/var/lib/jellyfin/log"; # Jellyfin uses this path by default
+      openFirewall = false;
+      # user = "jellyfin";  # implied by service; uncomment if you want to be explicit
+      # group = "jellyfin";
+    };
+
+    # Optional: include ffmpeg that Jellyfin expects. The service will reference its own,
+    # but pinning jellyfin-ffmpeg here lets you control versions centrally.
+    environment.systemPackages = lib.mkIf (cfg.enable && cfg.jellyfin.enable) (with pkgs; [
+      jellyfin-ffmpeg
+      # jellyfin
+      # jellyfin-web
+    ]);
+
+    ########################################
     # Audiobookshelf (Podman)
-    ############################
+    ########################################
     virtualisation.oci-containers.containers = lib.mkIf (cfg.enable && cfg.audiobookshelf.enable) {
       audiobookshelf = {
         image = "ghcr.io/advplyr/audiobookshelf:latest";
@@ -107,35 +128,39 @@ in
       };
     };
 
-    ############################
+    ########################################
     # Caddy reverse proxy
-    ############################
+    ########################################
     services.caddy = lib.mkIf cfg.enable {
       enable = true;
-      acmeCA = "https://acme-staging-v02.api.letsencrypt.org/directory";
-      extraConfig = ''
+
+      # LAN-first: keep ACME disabled; flip tlsMode="internal" to enable internal CA.
+      enableACME = false;
+
+      config = ''
         ${lib.optionalString (cfg.jellyfin.enable) (vhost "jellyfin.${cfg.domainBase}" "127.0.0.1:8096")}
         ${lib.optionalString (cfg.audiobookshelf.enable) (vhost "books.${cfg.domainBase}" "127.0.0.1:13378")}
       '';
     };
 
-    ############################
+    ########################################
     # Firewall
-    ############################
+    ########################################
     networking.firewall = lib.mkIf cfg.enable {
       enable = true;
       allowedTCPPorts = [ 80 ] ++ lib.optional (cfg.tlsMode != "none") 443;
     };
 
-    ############################
+    ########################################
     # Hardware video accel (Intel)
-    ############################
+    ########################################
+
     hardware.graphics.enable = lib.mkIf cfg.enable true;
     hardware.graphics.extraPackages = lib.mkIf cfg.enable (with pkgs; [ intel-media-driver ]);
 
-    ############################
+    ########################################
     # Health
-    ############################
+    ########################################
     services.smartd.enable = lib.mkIf cfg.enable true;
   };
 }
