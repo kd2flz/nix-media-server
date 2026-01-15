@@ -2,13 +2,13 @@
 { pkgs, lib, ... }:
 {
   imports = [ ../../modules/media-server.nix ];
-  
+
   networking.hostName = "T29769";       # per-host can override if desired
   time.timeZone = "America/New_York";
 
   services.mediaServer = {
     enable = true;
-    domainBase = "sandbox-media.ccistack.com"; # site-specific base domain
+    domainBase = "t29769.community.int"; # site-specific base domain
     tlsMode = "internal";                        # or "internal" if you want internal CA
 
     paths = {
