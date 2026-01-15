@@ -101,10 +101,8 @@ in
       enable = true;
       user = "audiobookshelf";
       group = "audiobookshelf";
-      dataDir = "/var/lib/audiobookshelf";
-      host = "127.0.0.1";
       port = 13378;
-      # openFirewall = false; # Caddy will handle external access
+      openFirewall = true; #Temporily allow direct access
     };
 
 
