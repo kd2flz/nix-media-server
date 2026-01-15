@@ -101,6 +101,7 @@ in
       enable = true;
       user = "audiobookshelf";
       group = "audiobookshelf";
+      host = "0.0.0.0";
       port = 13378;
       openFirewall = true; #Temporily allow direct access
     };
