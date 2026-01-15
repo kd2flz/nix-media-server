@@ -118,27 +118,6 @@ in
       enable = true;
       resume = false;
     
-      # Global block — FIRST in file, and only once
-      globalConfig = ''
-        {
-          pki {
-            install_trust false
-          }
-    
-          # Optional: global logging (use `logging`, not `log`)
-          #logging {
-           # logs {
-            #  default {
-             #   level ERROR
-                # Example outputs:
-                # output discard
-                # output file /var/log/caddy/access.log
-              #}
-            #}
-          #}
-        }
-      '';
-    
       # Site blocks only
       extraConfig = ''
         jellyfin.${cfg.domainBase} {
