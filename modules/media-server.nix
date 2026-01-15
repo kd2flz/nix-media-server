@@ -66,11 +66,6 @@ in
     users.groups.media = { };
 
     ########################################
-    # Virtualisation (Podman for Audiobookshelf)
-    ########################################
-    virtualisation.podman.enable = true;
-
-    ########################################
     # Jellyfin (use upstream module; no tmpfiles logic here)
     ########################################
     users.groups.jellyfin = lib.mkIf cfg.jellyfin.enable { };
@@ -92,39 +87,44 @@ in
     ]);
 
     ########################################
-    # Audiobookshelf (Podman container)
+    # Audiobookshelf (Native NixOS service)
     ########################################
-    virtualisation.oci-containers.containers = lib.mkIf cfg.audiobookshelf.enable {
-      audiobookshelf = {
-        image = "ghcr.io/advplyr/audiobookshelf:latest";
-        ports = [ "127.0.0.1:13378:80" ];
-        volumes = [
-          "${cfg.paths.audiobooks}:/audiobooks"
-          "/var/lib/audiobookshelf/config:/config"
-          "/var/lib/audiobookshelf/metadata:/metadata"
-        ];
-        environment = {
-          TZ = (config.time.timeZone or "UTC");
-        };
-      };
+    users.groups.audiobookshelf = lib.mkIf cfg.audiobookshelf.enable { };
+
+    users.users.audiobookshelf = lib.mkIf cfg.audiobookshelf.enable {
+      isSystemUser = true;
+      group = "audiobookshelf";
+      extraGroups = [ "media" ]; # read access to /srv/media/*
     };
+
+    services.audiobookshelf = lib.mkIf cfg.audiobookshelf.enable {
+      enable = true;
+      user = "audiobookshelf";
+      group = "audiobookshelf";
+      dataDir = "/var/lib/audiobookshelf";
+      host = "127.0.0.1";
+      port = 13378;
+      # openFirewall = false; # Caddy will handle external access
+    };
+
+
 
     ########################################
     # Caddy reverse proxy (HTTP only by default)
     ########################################
 
-    
+
     services.caddy = {
       enable = true;
       resume = false;
-    
+
       # Site blocks only
       extraConfig = ''
         jellyfin.${cfg.domainBase} {
           tls internal
           reverse_proxy 127.0.0.1:8096
         }
-    
+
         ${lib.optionalString cfg.audiobookshelf.enable ''
         books.${cfg.domainBase} {
           tls internal
