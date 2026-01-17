@@ -26,11 +26,27 @@ in
     };
 
     # Blackbox exporter for Audiobookshelf HTTP probe
+
+    # Blackbox exporter (probes Audiobookshelf HTTP endpoint)
     services.prometheus.exporters.blackbox = {
       enable = true;
       listenAddress = "127.0.0.1";
       port = 9115;
+
+      # REQUIRED: configuration for probe modules
+      configFile = pkgs.writeText "blackbox.yml" ''
+        modules:
+          http_2xx:
+            prober: http
+            timeout: 5s
+            http:
+              preferred_ip_protocol: "ip4"
+              # Accept 200 + common redirects if you want:
+              # valid_status_codes: [200, 301, 302, 308]
+              # follow_redirects: true
+      '';
     };
+
 
     #############################################
     # Prometheus (scrape targets)

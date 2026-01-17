@@ -21,12 +21,6 @@
     openFirewall = true;
   };
 
-  #Enable Comin Exporter (For Prometheus)
-  services.comin.exporter = {
-        listenAddress = "127.0.0.1";
-    port = 4243;
-  };
-
   # Add System packages
   environment.systemPackages = with pkgs; [
     w3m
