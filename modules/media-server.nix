@@ -128,8 +128,7 @@ in
         "d /var/wizarr 0755 wizarr wizarr - -"
       ];
 
-      virtualisation.oci-containers.containers = lib.mkIf cfg.wizarr.enable {
-        wizarr = {
+      virtualisation.oci-containers.containers.wizarr = lib.mkIf cfg.wizarr.enable {
           image = "ghcr.io/wizarrrr/wizarr:latest";
 
           # Bind to localhost — Caddy will expose it
@@ -148,8 +147,6 @@ in
 
           extraOptions = [ "--name=wizarr" ];
         };
-      };
-
 
 
     ########################################
