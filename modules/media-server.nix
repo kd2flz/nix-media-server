@@ -53,7 +53,13 @@ in
       default = true;
       description = "Enable Jellyfin Module.";
     };
+    wizarr.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable Wizarr Module.";
+    };
   };
+
 
   ########################################
   # Implementation
@@ -106,6 +112,44 @@ in
       openFirewall = true; #Temporily allow direct access
     };
 
+      ########################################
+      # Wizarr (optional)
+      ########################################
+
+      users.groups.wizarr = lib.mkIf cfg.wizarr.enable { };
+      users.users.wizarr = lib.mkIf cfg.wizarr.enable {
+        isSystemUser = true;
+        group = "wizarr";
+        home = "/var/wizarr";
+      };
+
+      # Persistent data directory
+      systemd.tmpfiles.rules = lib.mkIf cfg.wizarr.enable [
+        "d /var/wizarr 0755 wizarr wizarr - -"
+      ];
+
+      virtualisation.oci-containers.containers = lib.mkIf cfg.wizarr.enable {
+        wizarr = {
+          image = "ghcr.io/wizarrrr/wizarr:latest";
+
+          # Bind to localhost — Caddy will expose it
+          ports = [ "127.0.0.1:5690:5690" ];
+
+          volumes = [
+            "/var/wizarr:/data"
+          ];
+
+          environment = {
+            PUID = "1000";   # or set to wizarr user UID via toString
+            PGID = "1000";
+            TZ = config.time.timeZone or "UTC";
+            DISABLE_BUILTIN_AUTH = "false";
+          };
+
+          extraOptions = [ "--name=wizarr" ];
+        };
+      };
+
 
 
     ########################################
@@ -123,7 +167,11 @@ in
           tls internal
           reverse_proxy 127.0.0.1:8096
         }
-
+        ${lib.optionalString cfg.wizarr.enable ''
+        invites.${cfg.domainBase} {
+          tls internal
+          reverse_proxy 127.0.0.1:5690
+        }''}
         ${lib.optionalString cfg.audiobookshelf.enable ''
         books.${cfg.domainBase} {
           tls internal
