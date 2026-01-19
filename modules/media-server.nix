@@ -185,7 +185,7 @@ in
     ########################################
     networking.firewall = {
       enable = true;
-      allowedTCPPorts = [ 80 ] ++ lib.optional (cfg.tlsMode != "none") 443;
+      allowedTCPPorts = [ 80 443 ];
     };
 
     ########################################
