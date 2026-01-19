@@ -122,14 +122,12 @@ in
         jellyfin.${cfg.domainBase} {
           tls internal
           reverse_proxy 127.0.0.1:8096
-          metrics
         }
 
         ${lib.optionalString cfg.audiobookshelf.enable ''
         books.${cfg.domainBase} {
           tls internal
           reverse_proxy 127.0.0.1:13378
-          metrics
         }''}
       '';
     };
