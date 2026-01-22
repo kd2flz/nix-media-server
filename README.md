@@ -10,6 +10,7 @@ This project provides a reusable, multi-site media server configuration using **
 *   **Audiobookshelf**: Self-hosted audiobook and podcast server.
 *   **Caddy**: Reverse proxy for Jellyfin and Audiobookshelf, with optional internal TLS.
 *   **Configurable Media Paths**: Define root, music, video, and audiobook directories.
+*   **SAMBA File Sharing**: Enable file sharing over SMB (for managing media files)
 *   **Intel Hardware Video Acceleration**: Optimized for transcoding performance.
 *   **SMART Disk Monitoring**: Enabled for storage health checks.
 *   **OpenSSH**: Secure remote access.
@@ -114,6 +115,36 @@ sudo mkdir -p /srv/media/{music,video,audiobooks}
 sudo chown root:media /srv/media/{music,video,audiobooks}
 sudo chmod 755 /srv/media/{music,video,audiobooks}
 ```
+
+## Samba File Sharing (Optional Module)
+If services.mediaServer.samba.enable = true; is set, the module automatically:
+
+- Enables the Samba server
+- Opens firewall ports
+- Creates a share mapped to your media root directory
+
+### Adding a Samba User
+Samba users must exist as Linux users and also have a Samba password entry.
+
+**Make sure the Admin user exists before adding a new SAMBA user**
+
+**Add the user to Samba:**
+
+```shell
+sudo smbpasswd -a admin
+sudo smbpasswd -e admin
+```
+
+The user can now authenticate when connecting to the share from Windows, macOS, or Linux.
+
+Connecting to the Share
+From another computer on your LAN:
+\\hostname\media
+
+or
+smb://hostname/media
+
+Use the Samba username and password created above.
 
 ## GitOps Deployment with Comin
 
