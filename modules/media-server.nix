@@ -133,11 +133,11 @@ in
          global = {
            "server smb encrypt" = "required";
            "server min protocol" = "SMB3_00";
-           "workgroup" = "WORKGROUP";
+           "workgroup" = "${builtins.toString topLevelHostname}";
            "security" = "user";
          };
 
-         "${builtins.toString topLevelHostname}" = {
+         "media" = {
            path       = "${cfg.paths.root}";
            writable   = "yes";
            comment    = "Media Directory";
