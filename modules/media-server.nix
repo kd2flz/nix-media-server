@@ -11,6 +11,8 @@ let
       reverse_proxy ${upstream}
     }
   '';
+
+  topLevelHostname = builtins.elemAt (lib.strings.splitString "." cfg.domainBase) 0;
 in
 {
   ########################################
@@ -135,10 +137,10 @@ in
            "security" = "user";
          };
 
-         testshare = {
-           path       = "/home/bahrom/Public";
+         "${builtins.toString topLevelHostname}" = {
+           path       = "${cfg.paths.root}";
            writable   = "yes";
-           comment    = "Hello World!";
+           comment    = "Media Directory";
            browseable = "yes";
          };
        };
