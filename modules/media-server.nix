@@ -58,6 +58,12 @@ in
       default = true;
       description = "Enable Wizarr Module.";
     };
+
+    samba.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable Samba Module.";
+    };
   };
 
 
@@ -112,6 +118,33 @@ in
       openFirewall = true; #Temporily allow direct access
     };
 
+     ########################################
+     # Samba (optional)
+     # ######################################
+
+     services.samba = lib.mkIf cfg.samba.enable {
+       enable = true;
+       package = pkgs.samba4Full;
+       openFirewall = true;
+
+       settings = {
+         global = {
+           "server smb encrypt" = "required";
+           "server min protocol" = "SMB3_00";
+           "workgroup" = "WORKGROUP";
+           "security" = "user";
+         };
+
+         testshare = {
+           path       = "/home/bahrom/Public";
+           writable   = "yes";
+           comment    = "Hello World!";
+           browseable = "yes";
+         };
+       };
+     };
+
+
       ########################################
       # Wizarr (optional)
       ########################################
@@ -165,7 +198,7 @@ in
           reverse_proxy 127.0.0.1:8096
         }
         ${lib.optionalString cfg.wizarr.enable ''
-        invites.${cfg.domainBase} {
+        invites.${cfg.domainBase} {s
           tls internal
           reverse_proxy 127.0.0.1:5690
         }''}
