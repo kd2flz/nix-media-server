@@ -144,7 +144,11 @@ From another computer on your LAN:
 or
 smb://hostname/media
 
-Use the Samba username and password created above.
+When you are asked for credentials, use the following information:
+
+Username: admin
+Password: [samba password set above]
+Domain: Server Hostname
 
 ## GitOps Deployment with Comin
 

@@ -6,7 +6,7 @@
 
   users.users.admin = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "video" ];
+    extraGroups = [ "wheel" "video" "media" ];
     initialPassword = "pleasechangeme";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOL/27STy6kXqS9zF+jnCTgeRJ+wDlHbQzOn7NOKZIw1 P33171-win11"
@@ -32,5 +32,5 @@
 
   # Set the System State Version - don't change authorizedKeys
     system.stateVersion = "25.11";
-    
+
 }
