@@ -1,18 +1,18 @@
 
 { pkgs, lib, ... }:
 {
- 
+
   # Temporarily enable podman
   virtualisation.containers.enable = true;
   virtualisation.podman.enable = true;
 
-  
+
   services.monitoring.enable = true;
-  
+
   # Optional dead-man-switch:
   #services.monitoring.enableDeadManSwitch = true;
   #services.monitoring.deadManURL = "https://hc-ping.com/<your-uuid>";
-  
+
   networking.hostName = "T29769";       # per-host can override if desired
   time.timeZone = "America/New_York";
 
@@ -30,5 +30,6 @@
 
     audiobookshelf.enable = true;
     jellyfin.enable = true;
+    wizarr.enable = true;
   };
 }
