@@ -1,11 +1,7 @@
 
 { pkgs, lib, ... }:
 {
-  imports = [ 
-    ../../modules/media-server.nix 
-    ../../modules/monitoring.nix
-  ];
-  
+ 
   # Temporarily enable podman
   virtualisation.containers.enable = true;
   virtualisation.podman.enable = true;

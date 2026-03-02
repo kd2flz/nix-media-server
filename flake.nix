@@ -25,6 +25,8 @@
           inherit system;
           modules = [
             ./modules/common.nix
+            ./modules/media-server.nix
+            ./modules/monitoring.nix
             ./hosts/${host}/default.nix
             ./hosts/${host}/hardware.nix
 
