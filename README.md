@@ -112,7 +112,10 @@ Create media directories manually:
 
 ```bash
 sudo mkdir -p /srv/media/{music,video,audiobooks}
-sudo chown root:media /srv/media/{music,video,audiobooks}
+sudo chown -R admin:media /srv/media
+sudo chmod -R 775 /srv/media
+``
+
 sudo chmod 755 /srv/media/{music,video,audiobooks}
 ```
 

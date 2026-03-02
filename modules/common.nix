@@ -9,7 +9,7 @@
     extraGroups = [ "wheel" "video" "media" ];
     initialPassword = "pleasechangeme";
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOL/27STy6kXqS9zF+jnCTgeRJ+wDlHbQzOn7NOKZIw1 P33171-win11"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBvUDztxgvoUy+8Q4FoSflZ2ezd3dBhKqFOm8mGvBHW+"
     ];
   };
   # LAN networking
@@ -26,6 +26,13 @@
     w3m
     fish
   ];
+
+  ## Configure the Gnome Desktop environment
+  services.displayManager.gdm = {
+    enable = true;
+    autoSuspend = false;
+  };
+  services.desktopManager.gnome.enable = true;
 
   # Allow unfree packages
     nixpkgs.config.allowUnfree = true;
