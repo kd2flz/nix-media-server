@@ -12,7 +12,7 @@
     
     wizarr = {
       url = "github:kd2flz/wizarr";
-    }
+    };
   };
 
   # Add `...` so future inputs don't break the flake
