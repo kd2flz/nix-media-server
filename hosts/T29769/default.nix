@@ -2,6 +2,16 @@
 { pkgs, lib, ... }:
 {
 
+  imports = [
+    inputs.wizarr.NixosModules.wizarr
+  ];
+  
+  # Temporarily enable wizarr NixosModules
+  services.wizarr = {
+    enable = true;
+    openFirewall = true;
+  };
+  
   # Temporarily enable podman
   virtualisation.containers.enable = true;
   virtualisation.podman.enable = true;
@@ -30,6 +40,5 @@
 
     audiobookshelf.enable = true;
     jellyfin.enable = true;
-    wizarr.enable = true;
   };
 }

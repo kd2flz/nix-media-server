@@ -9,10 +9,14 @@
       url = "github:nlewo/comin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    
+    wizarr = {
+      url = "github:kd2flz/wizarr";
+    }
   };
 
   # Add `...` so future inputs don't break the flake
-  outputs = { self, nixpkgs, comin, ... }:
+  outputs = { self, nixpkgs, comin, wizarr, ... }:
   let
     system = "x86_64-linux";
     hostNames = builtins.attrNames (builtins.readDir ./hosts);
