@@ -148,22 +148,22 @@ in
 
 
       ########################################
-      # Wizarr (optional)
+      # Wizarr (optional) — skip if using native wizarr module
       ########################################
 
-      users.groups.wizarr = lib.mkIf cfg.wizarr.enable { };
-      users.users.wizarr = lib.mkIf cfg.wizarr.enable {
+      users.groups.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) { };
+      users.users.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) {
         isSystemUser = true;
         group = "wizarr";
         home = "/var/wizarr";
       };
 
       # Persistent data directory
-      systemd.tmpfiles.rules = lib.mkIf cfg.wizarr.enable [
+      systemd.tmpfiles.rules = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) [
         "d /var/wizarr 0755 wizarr wizarr - -"
       ];
 
-      virtualisation.oci-containers.containers.wizarr = lib.mkIf cfg.wizarr.enable {
+      virtualisation.oci-containers.containers.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) {
           image = "ghcr.io/wizarrrr/wizarr:latest";
 
           # Bind to localhost — Caddy will expose it

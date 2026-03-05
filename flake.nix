@@ -20,8 +20,19 @@
   let
     system = "x86_64-linux";
     hostNames = builtins.attrNames (builtins.readDir ./hosts);
+    pkgs = import nixpkgs { inherit system; };
+    wizarr-pkg = wizarr.packages.${system}.wizarr;
+    wizarr-module = import (wizarr + "/nix/module.nix") {
+      inherit pkgs;
+      wizarrPkg = wizarr-pkg;
+    };
   in
   {
+    nixosModules = {
+      comin = comin.nixosModules.comin;
+      inherit wizarr-module;
+    };
+
     nixosConfigurations =
       builtins.listToAttrs (map (host: {
         name = host;
@@ -37,7 +48,10 @@
             # Enable comin's NixOS module
             comin.nixosModules.comin
 
-            # Per-host comin configuration (works for all hosts since we’re in a loop)
+            # Enable wizarr
+            wizarr-module
+
+            # Per-host comin configuration (works for all hosts since we're in a loop)
             {
               services.comin = {
                 enable = true;
