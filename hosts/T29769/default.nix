@@ -2,10 +2,6 @@
 { pkgs, lib, ... }:
 {
 
-  imports = [
-    inputs.wizarr.NixosModules.wizarr
-  ];
-  
   # Temporarily enable wizarr NixosModules
   services.wizarr = {
     enable = true;
