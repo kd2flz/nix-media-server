@@ -11,8 +11,6 @@ This project provides a reusable, multi-site media server configuration using **
 *   **Caddy**: Reverse proxy for Jellyfin and Audiobookshelf, with optional internal TLS.
 *   **Configurable Media Paths**: Define root, music, video, and audiobook directories.
 *   **SAMBA File Sharing**: Enable file sharing over SMB (for managing media files)
-*   **Intel Hardware Video Acceleration**: Optimized for transcoding performance.
-*   **SMART Disk Monitoring**: Enabled for storage health checks.
 *   **OpenSSH**: Secure remote access.
 *   **Declarative Configuration**: Manage your media server infrastructure with Nix Flakes.
 
