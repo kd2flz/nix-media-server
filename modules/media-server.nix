@@ -200,7 +200,7 @@ in
           reverse_proxy 127.0.0.1:8096
         }
         ${lib.optionalString cfg.wizarr.enable ''
-        invites.${cfg.domainBase} {s
+        invites.${cfg.domainBase} {
           tls internal
           reverse_proxy 127.0.0.1:5690
         }''}
