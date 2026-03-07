@@ -14,6 +14,10 @@
   };
   # LAN networking
   networking.networkmanager.enable = true;
+  
+  # Enable Podman
+  virtualisation.containers.enable = true;
+  virtualisation.podman.enable = true;
 
   services.avahi = {
     enable = true;
