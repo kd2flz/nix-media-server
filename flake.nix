@@ -9,28 +9,19 @@
       url = "github:nlewo/comin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    
-    wizarr = {
-      url = "github:kd2flz/wizarr";
-    };
+
   };
 
   # Add `...` so future inputs don't break the flake
-  outputs = { self, nixpkgs, comin, wizarr, ... }:
+  outputs = { self, nixpkgs, comin, ... }:
   let
     system = "x86_64-linux";
     hostNames = builtins.attrNames (builtins.readDir ./hosts);
     pkgs = import nixpkgs { inherit system; };
-    wizarr-pkg = wizarr.packages.${system}.wizarr;
-    wizarr-module = import (wizarr + "/nix/module.nix") {
-      inherit pkgs;
-      wizarrPkg = wizarr-pkg;
-    };
   in
   {
     nixosModules = {
       comin = comin.nixosModules.comin;
-      inherit wizarr-module;
     };
 
     nixosConfigurations =
@@ -47,9 +38,6 @@
 
             # Enable comin's NixOS module
             comin.nixosModules.comin
-
-            # Enable wizarr
-            wizarr-module
 
             # Per-host comin configuration (works for all hosts since we're in a loop)
             {
