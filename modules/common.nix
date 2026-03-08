@@ -1,9 +1,21 @@
 
 { config, pkgs, ... }:
 {
-
+ 
+ # Enable SSH
  services.openssh.enable = true;
 
+ # Automatic Updating
+ system.autoUpgrade.enable = true;
+ system.autoUpgrade.dates = "weekly";
+ 
+ # Automatic Cleanup
+ nix.gc.automatic = true;
+ nix.gc.dates = "daily";
+ nix.gc.options = "--delete-older-than 10d";
+ nix.settings.auto-optimise-store = true;
+ 
+ # Define admin user
   users.users.admin = {
     isNormalUser = true;
     extraGroups = [ "wheel" "video" "media" ];
