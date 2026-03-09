@@ -98,6 +98,7 @@ in
     # Optional: provide the ffmpeg build Jellyfin expects
     environment.systemPackages = lib.mkIf cfg.jellyfin.enable (with pkgs; [
       jellyfin-ffmpeg
+      fastfetch
     ]);
 
     ########################################
