@@ -5,15 +5,6 @@
   # Enable SSH
   services.openssh.enable = true;
 
-  # Comin configuration
-  options.comin = {
-    branch = lib.mkOption {
-      type = lib.types.str;
-      default = "main";
-      description = "Git branch for Comin to poll and deploy.";
-    };
-  };
-
   # Automatic Updating
  system.autoUpgrade.enable = true;
  system.autoUpgrade.dates = "weekly";

@@ -20,8 +20,18 @@
     pkgs = nixpkgs.legacyPackages.${system};
     lib = nixpkgs.lib;
 
+    # Comin option definition - defined here so it's available when Comin evaluates
+    cominModule = {
+      options.comin = lib.mkOption {
+        type = lib.types.str;
+        default = "main";
+        description = "Git branch for Comin to poll and deploy.";
+      };
+    };
+
     evalHostConfig = host: lib.evalModules {
       modules = [
+        cominModule
         ./modules/common.nix
         ./modules/media-server.nix
         ./modules/monitoring.nix
@@ -44,6 +54,7 @@
         in nixpkgs.lib.nixosSystem {
           inherit system;
           modules = [
+            cominModule
             ./modules/common.nix
             ./modules/media-server.nix
             ./modules/monitoring.nix
