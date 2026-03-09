@@ -2,6 +2,7 @@
 { pkgs, lib, ... }:
 {
 
+  comin.branch = "dev";
 
   services.monitoring.enable = true;
 
