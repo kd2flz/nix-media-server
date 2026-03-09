@@ -16,7 +16,11 @@
   outputs = { self, nixpkgs, comin, ... }:
   let
     system = "x86_64-linux";
-    hostNames = builtins.attrNames (builtins.readDir ./hosts);
+    hostNames = builtins.filter (host:
+      host != "README.md"
+      && builtins.pathExists ./hosts/${host}/default.nix
+      && builtins.pathExists ./hosts/${host}/hardware.nix
+    ) (builtins.attrNames (builtins.readDir ./hosts));
     pkgs = nixpkgs.legacyPackages.${system};
 
     getCominBranch = host:
