@@ -2,7 +2,7 @@
 { pkgs, lib, ... }:
 {
 
-  comin.branch = "dev";
+  deployment.cominBranch = "testing-T29769";
 
   services.monitoring.enable = true;
 

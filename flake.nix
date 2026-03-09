@@ -21,11 +21,14 @@
     lib = nixpkgs.lib;
 
     # Comin option definition - defined here so it's available when Comin evaluates
+    # Use deployment.cominBranch to avoid conflict with services.comin
     cominModule = {
-      options.comin = lib.mkOption {
-        type = lib.types.str;
-        default = "main";
-        description = "Git branch for Comin to poll and deploy.";
+      options.deployment = {
+        cominBranch = lib.mkOption {
+          type = lib.types.str;
+          default = "main";
+          description = "Git branch for Comin to poll and deploy.";
+        };
       };
     };
 
@@ -50,7 +53,7 @@
         name = host;
         value = let
           hostConfig = evalHostConfig host;
-          cominBranch = hostConfig.config.comin.branch or "main";
+          cominBranch = hostConfig.config.deployment.cominBranch or "main";
         in nixpkgs.lib.nixosSystem {
           inherit system;
           modules = [
