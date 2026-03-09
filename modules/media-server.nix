@@ -220,7 +220,7 @@ in
     ########################################
     networking.firewall = {
       enable = true;
-      allowedTCPPorts = [ 80 443 5690 ];
+      allowedTCPPorts = [ 80 443 ];
     };
 
     ########################################
