@@ -1,11 +1,20 @@
 
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 {
- 
- # Enable SSH
- services.openssh.enable = true;
+  
+  # Enable SSH
+  services.openssh.enable = true;
 
- # Automatic Updating
+  # Comin configuration
+  options.comin = {
+    branch = lib.mkOption {
+      type = lib.types.str;
+      default = "main";
+      description = "Git branch for Comin to poll and deploy.";
+    };
+  };
+
+  # Automatic Updating
  system.autoUpgrade.enable = true;
  system.autoUpgrade.dates = "weekly";
  
