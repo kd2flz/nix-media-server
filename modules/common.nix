@@ -1,11 +1,11 @@
 
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 {
- 
- # Enable SSH
- services.openssh.enable = true;
+  
+  # Enable SSH
+  services.openssh.enable = true;
 
- # Automatic Updating
+  # Automatic Updating
  system.autoUpgrade.enable = true;
  system.autoUpgrade.dates = "weekly";
  

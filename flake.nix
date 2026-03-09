@@ -17,7 +17,10 @@
   let
     system = "x86_64-linux";
     hostNames = builtins.attrNames (builtins.readDir ./hosts);
-    pkgs = import nixpkgs { inherit system; };
+    pkgs = nixpkgs.legacyPackages.${system};
+
+    getCominBranch = host:
+      if host == "T29769" then "dev" else "main";
   in
   {
     nixosModules = {
@@ -27,7 +30,9 @@
     nixosConfigurations =
       builtins.listToAttrs (map (host: {
         name = host;
-        value = nixpkgs.lib.nixosSystem {
+        value = let
+          cominBranch = getCominBranch host;
+        in nixpkgs.lib.nixosSystem {
           inherit system;
           modules = [
             ./modules/common.nix
@@ -39,7 +44,7 @@
             # Enable comin's NixOS module
             comin.nixosModules.comin
 
-            # Per-host comin configuration (works for all hosts since we're in a loop)
+            # Per-host comin configuration
             {
               services.comin = {
                 enable = true;
@@ -48,8 +53,7 @@
                 remotes = [{
                   name = "origin";
                   url = "https://github.com/kd2flz/nix-media-server.git";
-                  branches.main.name = "main";
-                  # Optionally: poller.period = 60; # seconds (default 60)
+                  branches.main.name = cominBranch;
                 }];
               };
             }

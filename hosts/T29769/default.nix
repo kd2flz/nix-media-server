@@ -2,7 +2,6 @@
 { pkgs, lib, ... }:
 {
 
-
   services.monitoring.enable = true;
 
   # Optional dead-man-switch:

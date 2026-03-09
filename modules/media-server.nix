@@ -98,6 +98,7 @@ in
     # Optional: provide the ffmpeg build Jellyfin expects
     environment.systemPackages = lib.mkIf cfg.jellyfin.enable (with pkgs; [
       jellyfin-ffmpeg
+      fastfetch
     ]);
 
     ########################################
@@ -166,17 +167,18 @@ in
       virtualisation.oci-containers.containers.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) {
           image = "ghcr.io/wizarrrr/wizarr:latest";
 
-          # Bind to localhost — Caddy will expose it
-          ports = [ "127.0.0.1:5690:5690" ];
+          # Allow Wizarr to bind to all interfaces
+          ports = [ "5690:5690" ];
 
           volumes = [
             "/var/wizarr:/data"
           ];
 
           environment = {
-            PUID = "1000";   # or set to wizarr user UID via toString
+            PUID = "1000";
             PGID = "1000";
             TZ = config.time.timeZone or "UTC";
+            WIZARR_HOST = "0.0.0.0";
             DISABLE_BUILTIN_AUTH = "false";
           };
 
@@ -220,7 +222,7 @@ in
     ########################################
     networking.firewall = {
       enable = true;
-      allowedTCPPorts = [ 80 443 ];
+      allowedTCPPorts = [ 80 443 5690 ];
     };
 
     ########################################
