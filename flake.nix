@@ -20,7 +20,7 @@
     pkgs = nixpkgs.legacyPackages.${system};
 
     getCominBranch = host:
-      if host == "T29769" then "testing-T29769" else "main";
+      if host == "T29769" then "dev" else "main";
   in
   {
     nixosModules = {
