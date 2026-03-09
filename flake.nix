@@ -18,30 +18,9 @@
     system = "x86_64-linux";
     hostNames = builtins.attrNames (builtins.readDir ./hosts);
     pkgs = nixpkgs.legacyPackages.${system};
-    lib = nixpkgs.lib;
 
-    # Comin option definition - defined here so it's available when Comin evaluates
-    # Use deployment.cominBranch to avoid conflict with services.comin
-    cominModule = {
-      options.deployment = {
-        cominBranch = lib.mkOption {
-          type = lib.types.str;
-          default = "main";
-          description = "Git branch for Comin to poll and deploy.";
-        };
-      };
-    };
-
-    evalHostConfig = host: lib.evalModules {
-      modules = [
-        cominModule
-        ./modules/common.nix
-        ./modules/media-server.nix
-        ./modules/monitoring.nix
-        ./hosts/${host}/default.nix
-        ./hosts/${host}/hardware.nix
-      ];
-    };
+    getCominBranch = host:
+      if host == "T29769" then "testing-T29769" else "main";
   in
   {
     nixosModules = {
@@ -52,12 +31,10 @@
       builtins.listToAttrs (map (host: {
         name = host;
         value = let
-          hostConfig = evalHostConfig host;
-          cominBranch = hostConfig.config.deployment.cominBranch or "main";
+          cominBranch = getCominBranch host;
         in nixpkgs.lib.nixosSystem {
           inherit system;
           modules = [
-            cominModule
             ./modules/common.nix
             ./modules/media-server.nix
             ./modules/monitoring.nix

@@ -2,8 +2,6 @@
 { pkgs, lib, ... }:
 {
 
-  deployment.cominBranch = "dev";
-
   services.monitoring.enable = true;
 
   # Optional dead-man-switch:
