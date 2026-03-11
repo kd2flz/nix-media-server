@@ -2,7 +2,7 @@
 
 This project provides a reusable, multi-site media server configuration using **NixOS**, featuring **Jellyfin**, **Audiobookshelf**, and **Caddy**.
 
-Adding a new host? See the [Adding a new Host](#adding%20a%20new%20host).
+Adding a new host? See the [Adding a new Host](#Adding%20a%20New%20Host).
 
 ***
 
