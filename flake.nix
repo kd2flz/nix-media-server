@@ -9,11 +9,15 @@
       url = "github:nlewo/comin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
+    
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Add `...` so future inputs don't break the flake
-  outputs = { self, nixpkgs, comin, ... }:
+  outputs = { self, nixpkgs, comin, sops-nix, ... }:
   let
     system = "x86_64-linux";
     hostNames = builtins.filter (host:
@@ -27,6 +31,14 @@
       if host == "T29769" then "dev" else "main";
   in
   {
+    devShells.${system}.default = pkgs.mkShell {
+      packages = with pkgs; [
+        age
+        sops
+        ssh-to-age
+      ];
+    };
+
     nixosModules = {
       comin = comin.nixosModules.comin;
     };
@@ -45,9 +57,12 @@
             ./hosts/${host}/default.nix
             ./hosts/${host}/hardware.nix
 
+            # Enable the Sops Nix module
+            sops-nix.nixosModules.sops
+            
             # Enable comin's NixOS module
             comin.nixosModules.comin
-
+            
             # Per-host comin configuration
             {
               services.comin = {
