@@ -8,11 +8,6 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
-    boot.loader.grub = {
-      enable = true;
-      device = "/dev/sda"; # or /dev/nvme0n1
-    };
-
   boot.initrd.availableKernelModules = [ "xhci_pci" "ehci_pci" "ahci" "usbhid" "sd_mod" ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-intel" "wl" ];

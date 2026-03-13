@@ -10,7 +10,13 @@
 
   networking.hostName = "T29769";       # per-host can override if desired
   time.timeZone = "America/New_York";
-
+  
+  # Configure Bootloader
+  boot.loader.grub = {
+    enable = true;
+    device = "/dev/sda";
+  };
+  
   services.mediaServer = {
     enable = true;
     domainBase = "t29769.community.int"; # site-specific base domain
