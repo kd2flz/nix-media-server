@@ -16,7 +16,16 @@
     enable = true;
     device = "/dev/sda";
   };
-  
+
+  # sops-nix secrets configuration
+  sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+  sops.defaultSopsFile = ../../../secrets/secrets.yaml;
+  sops.secrets.test_secret = {
+    owner = "root";
+    group = "root";
+    mode = "0400";
+  };
+
   services.mediaServer = {
     enable = true;
     domainBase = "t29769.community.int"; # site-specific base domain
