@@ -60,6 +60,11 @@
             # Enable the Sops Nix module
             sops-nix.nixosModules.sops
             
+            # Common sops configuration - secrets file at flake root
+            {
+              sops.defaultSopsFile = "${self.outPath}/secrets/secrets.yaml";
+            }
+            
             # Enable comin's NixOS module
             comin.nixosModules.comin
             
