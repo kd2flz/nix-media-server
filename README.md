@@ -154,20 +154,33 @@ Add the output as `&admin` in `.sops.yaml`.
 
 ### Editing Secrets
 
-When you edit and save secrets, sops will re-encrypt using all keys in `.sops.yaml`. However, if you encounter issues, use the explicit re-encrypt method:
-
 ```bash
 # Enter dev shell
 nix develop
 
-# Get all age keys from .sops.yaml (list all keys comma-separated)
-SOPS_AGE_SSH_PRIVATE_KEY_FILE=~/.ssh/sops-admin sops \
-  --age "age1admin,age1host1,age1host2" \
-  --encrypt secrets/secrets.yaml > secrets/secrets.yaml.tmp && \
-  mv secrets/secrets.yaml.tmp secrets/secrets.yaml
+# Edit secrets (decrypts, opens editor, re-encrypts on save)
+sops secrets/secrets.yaml
 ```
 
 The encrypted file can be safely committed to git.
+
+### Re-encrypting for New Keys
+
+When you add a new host key to `.sops.yaml`, re-encrypt the secrets so the new host can decrypt them:
+
+```bash
+nix develop
+
+# Re-encrypt all secrets files so new keys can decrypt
+find secrets/ -name "*.yaml" -exec sops updatekeys {} \;
+```
+
+Or for a single file:
+```bash
+sops updatekeys secrets/secrets.yaml
+```
+
+The `updatekeys` command reads `.sops.yaml` and re-encrypts the data encryption key for all listed recipients.
 
 ### Verify Configuration
 
@@ -245,21 +258,14 @@ sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
 **4. Re-encrypt secrets with all keys:**
 
-After adding a new host key to `.sops.yaml`, you must re-encrypt the secrets file so the new host can decrypt it:
+After adding a new host key to `.sops.yaml`, re-encrypt the secrets so the new host can decrypt them:
 
 ```bash
-# Enter dev shell
 nix develop
 
-# Get all current age keys from .sops.yaml (format: age1xxx,age1yyy,...)
-# Then re-encrypt:
-SOPS_AGE_SSH_PRIVATE_KEY_FILE=~/.ssh/sops-admin sops \
-  --age "age1admin,age1host1,age1host2" \
-  --encrypt secrets/secrets.yaml > secrets/secrets.yaml.tmp && \
-  mv secrets/secrets.yaml.tmp secrets/secrets.yaml
+# Re-encrypt for all keys in .sops.yaml
+sops updatekeys secrets/secrets.yaml
 ```
-
-**Important:** List ALL keys (admin + all hosts) in the --age flag. This ensures every host can decrypt the secrets.
 
 **5. Commit and push:**
 
