@@ -6,7 +6,7 @@
 # - Host keys: sudo cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age
 
 keys:
-    - &admin age1mrpqmc4eczqgw34phyanu9tej8wn83m9lpwslm7faqyak475ag5s0ph9jx
+    - &admin ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIIKRNK9GcahrGo2Wg4Rj+icoMRq7krbdbzlV+tZkCuS
     - &t29769 age15qtqqhe9pl4ucsjm9tkyamq5wkwytp70gvmarx3p46s44vuldy4snnaa7u
 creation_rules:
     - path_regex: secrets/[^/]+\.yaml$
