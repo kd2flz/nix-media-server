@@ -138,23 +138,33 @@ To edit secrets, you need your personal SSH key added to `.sops.yaml`. Run:
 # Enter dev shell first
 nix develop
 
-# Convert your SSH key to age format
+# Convert your SSH private key to age format (for use in .sops.yaml)
 ssh-to-age -i ~/.ssh/id_ed25519.pub
-# or
-ssh-to-age -i ~/.ssh/id_rsa.pub
+
+# Or if you have a dedicated sops key
+ssh-to-age -i ~/.ssh/sops-admin.pub
+```
+
+Alternatively, get the age key from the SSH public key:
+```bash
+ssh-to-age -i ~/.ssh/id_ed25519.pub
 ```
 
 Add the output as `&admin` in `.sops.yaml`.
 
-
 ### Editing Secrets
+
+When you edit and save secrets, sops will re-encrypt using all keys in `.sops.yaml`. However, if you encounter issues, use the explicit re-encrypt method:
 
 ```bash
 # Enter dev shell
 nix develop
 
-# Edit secrets (decrypts, opens editor, re-encrypts on save)
-sops secrets/secrets.yaml
+# Get all age keys from .sops.yaml (list all keys comma-separated)
+SOPS_AGE_SSH_PRIVATE_KEY_FILE=~/.ssh/sops-admin sops \
+  --age "age1admin,age1host1,age1host2" \
+  --encrypt secrets/secrets.yaml > secrets/secrets.yaml.tmp && \
+  mv secrets/secrets.yaml.tmp secrets/secrets.yaml
 ```
 
 The encrypted file can be safely committed to git.
@@ -211,7 +221,7 @@ This outputs something like: `age1abc123...`
 keys:
   - &admin age1personal        # Your personal editing key
   - &t29769 age1T29769         # T29769 SSH host key (ed25519)
-  - &p27691 age1p27691    # belmedia SSH host key (ed25519)
+  - &belmedia age1belmedia     # belmedia SSH host key (ed25519)
   - &newhost age1abc123       # NEW HOST - add this line
 
 creation_rules:
@@ -220,26 +230,41 @@ creation_rules:
       - age:
           - *admin
           - *t29769
-          - *p27691
+          - *belmedia
           - *newhost    # Add this reference
 ```
+
+**Note:** The `sops.defaultSopsFile` is configured automatically in `flake.nix` for all hosts. You only need to add `sops.age.sshKeyPaths` and any `sops.secrets` definitions in your host config.
 
 **3. Configure the host to use sops:**
 
 In `hosts/new-hostname/default.nix`, add:
 ```nix
 sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-sops.defaultSopsFile = ../../../secrets/secrets.yaml;
 ```
 
-**4. Add secrets to the host (optional):**
+**4. Re-encrypt secrets with all keys:**
 
-```nix
-sops.secrets.my_secret = {
-  owner = "someuser";
-  group = "somegroup";
-  mode = "0400";
-};
+After adding a new host key to `.sops.yaml`, you must re-encrypt the secrets file so the new host can decrypt it:
+
+```bash
+# Enter dev shell
+nix develop
+
+# Get all current age keys from .sops.yaml (format: age1xxx,age1yyy,...)
+# Then re-encrypt:
+SOPS_AGE_SSH_PRIVATE_KEY_FILE=~/.ssh/sops-admin sops \
+  --age "age1admin,age1host1,age1host2" \
+  --encrypt secrets/secrets.yaml > secrets/secrets.yaml.tmp && \
+  mv secrets/secrets.yaml.tmp secrets/secrets.yaml
+```
+
+**Important:** List ALL keys (admin + all hosts) in the --age flag. This ensures every host can decrypt the secrets.
+
+**5. Commit and push:**
+
+```bash
+git add -A && git commit -m "Add new-host to sops-nix" && git push
 ```
 
 ***
@@ -252,7 +277,6 @@ Create media directories manually:
 sudo mkdir -p /srv/media/{music,video,audiobooks}
 sudo chown -R admin:media /srv/media
 sudo chmod -R 775 /srv/media
-``
 
 sudo chmod 755 /srv/media/{music,video,audiobooks}
 ```
