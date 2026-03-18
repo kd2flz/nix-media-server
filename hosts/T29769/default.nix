@@ -19,7 +19,7 @@
 
   # sops-nix secrets configuration
   sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-  sops.secrets.test_secret = {
+  sops.secrets.secret = {
     owner = "root";
     group = "root";
     mode = "0400";
