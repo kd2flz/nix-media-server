@@ -38,6 +38,26 @@
         "type": "github"
       }
     },
+    "nanitor": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1772332839,
+        "narHash": "sha256-nSzAonAcOzNAWCTxZBTMIlMF7ST/gseZO+cCCFh/59Y=",
+        "owner": "kd2flz",
+        "repo": "nanitor-agent",
+        "rev": "58d961cdc38eae99a045fc1f2d63f08cbd8346f3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kd2flz",
+        "repo": "nanitor-agent",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1770107345,
@@ -73,6 +93,7 @@
     "root": {
       "inputs": {
         "comin": "comin",
+        "nanitor": "nanitor",
         "nixpkgs": "nixpkgs_2",
         "sops-nix": "sops-nix"
       }

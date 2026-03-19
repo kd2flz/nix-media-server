@@ -66,6 +66,21 @@ in
       default = true;
       description = "Enable Samba Module.";
     };
+
+    nanitor.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enable Nanitor monitoring agent for system health checks and metrics.
+        Requires nanitor/enroll_token and nanitor/endpoint to be set in secrets/secrets.yaml.
+      '';
+    };
+
+    nanitor.logLevel = lib.mkOption {
+      type = lib.types.enum [ "debug" "info" "warn" "error" ];
+      default = "info";
+      description = "Log level for nanitor agent (debug, info, warn, error).";
+    };
   };
 
 
@@ -183,7 +198,49 @@ in
           };
 
           extraOptions = [ "--name=wizarr" ];
-        };
+         };
+
+
+     ########################################
+     # Nanitor monitoring agent (optional)
+     ########################################
+     # Enables the Nanitor monitoring agent for system health checks.
+     # 
+     # Usage:
+     #   services.mediaServer.nanitor.enable = true;
+     #   services.mediaServer.nanitor.logLevel = "debug"; # optional
+     #
+     # Secrets Configuration:
+     #   The agent requires enrollment token and endpoint from secrets/secrets.yaml:
+     #   
+     #   nanitor:
+     #     enroll_token: "<your-enrollment-token>"
+     #     endpoint: "https://api.nanitor.example.com"
+     #
+     #   To manage secrets:
+     #   - Edit with: nix develop -c sops secrets/secrets.yaml
+     #   - Decrypt to view: nix develop -c sops -d secrets/secrets.yaml
+     #
+     # Log Level Options: debug, info, warn, error (default: info)
+     #
+
+     services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+       enable = true;
+       logLevel = cfg.nanitor.logLevel;
+       environment = {
+         # Credentials are loaded from sops-nix managed secrets file
+         # sops decrypts these at deployment time
+         NANITOR_ENROLL_TOKEN = config.sops.placeholder."nanitor/enroll_token";
+         NANITOR_ENDPOINT = config.sops.placeholder."nanitor/endpoint";
+       };
+     };
+
+     # Ensure sops secrets are decrypted before nanitor-agent service starts
+     # This dependency ordering is critical for the agent to receive credentials
+     systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+       after = [ "sops-nix.service" ];
+       wants = [ "sops-nix.service" ];
+     };
 
 
     ########################################

@@ -14,10 +14,15 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nanitor = {
+      url = "github:kd2flz/nanitor-agent";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Add `...` so future inputs don't break the flake
-  outputs = { self, nixpkgs, comin, sops-nix, ... }:
+  outputs = { self, nixpkgs, comin, sops-nix, nanitor, ... }:
   let
     system = "x86_64-linux";
     hostNames = builtins.filter (host:
@@ -70,6 +75,9 @@
             
             # Enable comin's NixOS module
             comin.nixosModules.comin
+            
+            # Enable nanitor agent NixOS module
+            nanitor.nixosModules.nanitor-agent
             
             # Per-host comin configuration
             {
