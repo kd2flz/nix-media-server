@@ -37,6 +37,9 @@
         sops
         ssh-to-age
       ];
+      shellHook = ''
+        export SOPS_AGE_KEY=$(ssh-to-age -private-key -i ~/.ssh/sops-admin 2>/dev/null)
+      '';
     };
 
     nixosModules = {
@@ -59,6 +62,11 @@
 
             # Enable the Sops Nix module
             sops-nix.nixosModules.sops
+            
+            # Common sops configuration - secrets file at flake root
+            {
+              sops.defaultSopsFile = "${self.outPath}/secrets/secrets.yaml";
+            }
             
             # Enable comin's NixOS module
             comin.nixosModules.comin
