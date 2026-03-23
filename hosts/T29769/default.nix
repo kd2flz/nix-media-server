@@ -2,7 +2,7 @@
 { pkgs, lib, ... }:
 {
 
-  services.monitoring.enable = false;
+  services.monitoring.enable = true;
 
   # Optional dead-man-switch:
   #services.monitoring.enableDeadManSwitch = true;
@@ -10,7 +10,7 @@
 
   networking.hostName = "T29769";       # per-host can override if desired
   time.timeZone = "America/New_York";
-  
+
   # Configure Bootloader
   boot.loader.grub = {
     enable = true;
@@ -40,5 +40,6 @@
     audiobookshelf.enable = true;
     jellyfin.enable = true;
     wizarr.enable = true;
+    nanitor.enable = true;
   };
 }
