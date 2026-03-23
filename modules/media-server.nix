@@ -201,46 +201,55 @@ in
          };
 
 
-     ########################################
-     # Nanitor monitoring agent (optional)
-     ########################################
-     # Enables the Nanitor monitoring agent for system health checks.
-     # 
-     # Usage:
-     #   services.mediaServer.nanitor.enable = true;
-     #   services.mediaServer.nanitor.logLevel = "debug"; # optional
-     #
-     # Secrets Configuration:
-     #   The agent requires enrollment token and endpoint from secrets/secrets.yaml:
-     #   
-     #   nanitor:
-     #     enroll_token: "<your-enrollment-token>"
-     #     endpoint: "https://api.nanitor.example.com"
-     #
-     #   To manage secrets:
-     #   - Edit with: nix develop -c sops secrets/secrets.yaml
-     #   - Decrypt to view: nix develop -c sops -d secrets/secrets.yaml
-     #
-     # Log Level Options: debug, info, warn, error (default: info)
-     #
+      ########################################
+      # Nanitor monitoring agent (optional)
+      ########################################
+      # Enables the Nanitor monitoring agent for system health checks.
+      # 
+      # Usage:
+      #   services.mediaServer.nanitor.enable = true;
+      #   services.mediaServer.nanitor.logLevel = "debug"; # optional
+      #
+      # Secrets Configuration:
+      #   The agent requires enrollment token and endpoint from secrets/secrets.yaml:
+      #   
+      #   nanitor_enroll_token: "<your-enrollment-token>"
+      #   nanitor_endpoint: "https://api.nanitor.example.com"
+      #
+      #   To manage secrets:
+      #   - Edit with: nix develop -c sops secrets/secrets.yaml
+      #   - Decrypt to view: nix develop -c sops -d secrets/secrets.yaml
+      #
+      # Log Level Options: debug, info, warn, error (default: info)
+      #
 
-     services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
-       enable = true;
-       logLevel = cfg.nanitor.logLevel;
-       environment = {
-         # Credentials are loaded from sops-nix managed secrets file
-         # sops decrypts these at deployment time
-         NANITOR_ENROLL_TOKEN = config.sops.placeholder."nanitor/enroll_token";
-         NANITOR_ENDPOINT = config.sops.placeholder."nanitor/endpoint";
-       };
-     };
+      services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+        enable = true;
+        logLevel = cfg.nanitor.logLevel;
+      };
 
-     # Ensure sops secrets are decrypted before nanitor-agent service starts
-     # This dependency ordering is critical for the agent to receive credentials
-     systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
-       after = [ "sops-nix.service" ];
-       wants = [ "sops-nix.service" ];
-     };
+      # Define sops secrets for nanitor credentials
+      sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
+        mode = "0440";
+        owner = "root";
+        group = "root";
+      };
+
+      sops.secrets.nanitor_endpoint = lib.mkIf cfg.nanitor.enable {
+        mode = "0440";
+        owner = "root";
+        group = "root";
+      };
+
+      # Pass credentials to nanitor agent via environment variables
+      systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+        environment = {
+          NANITOR_ENROLL_TOKEN = config.sops.secrets.nanitor_enroll_token.path;
+          NANITOR_ENDPOINT = config.sops.secrets.nanitor_endpoint.path;
+        };
+        after = [ "sops-nix.service" ];
+        wants = [ "sops-nix.service" ];
+      };
 
 
     ########################################

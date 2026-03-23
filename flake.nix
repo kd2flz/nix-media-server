@@ -32,6 +32,20 @@
     ) (builtins.attrNames (builtins.readDir ./hosts));
     pkgs = nixpkgs.legacyPackages.${system};
 
+    # Overlay to add nanitor-agent package from nanitor flake
+    nanitorOverlay = final: prev: {
+      nanitor-agent = nanitor.packages.${prev.system}.nanitor-agent;
+    };
+
+    # NixosSystem with nanitor package available
+    makeNixosSystem = lib: system: modules:
+      lib.nixosSystem {
+        inherit system;
+        modules = modules ++ [
+          { nixpkgs.overlays = [ nanitorOverlay ]; }
+        ];
+      };
+
     getCominBranch = host:
       if host == "T29769" then "dev" else "main";
   in
@@ -56,9 +70,7 @@
         name = host;
         value = let
           cominBranch = getCominBranch host;
-        in nixpkgs.lib.nixosSystem {
-          inherit system;
-          modules = [
+        in makeNixosSystem nixpkgs.lib system [
             ./modules/common.nix
             ./modules/media-server.nix
             ./modules/monitoring.nix
@@ -93,7 +105,6 @@
               };
             }
           ];
-        };
       }) hostNames);
   };
 }
