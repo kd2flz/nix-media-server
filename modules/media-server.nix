@@ -66,6 +66,21 @@ in
       default = true;
       description = "Enable Samba Module.";
     };
+
+    nanitor.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enable Nanitor monitoring agent for system health checks and metrics.
+        Requires nanitor/enroll_token and nanitor/endpoint to be set in secrets/secrets.yaml.
+      '';
+    };
+
+    nanitor.logLevel = lib.mkOption {
+      type = lib.types.enum [ "debug" "info" "warn" "error" ];
+      default = "info";
+      description = "Log level for nanitor agent (debug, info, warn, error).";
+    };
   };
 
 
@@ -183,7 +198,65 @@ in
           };
 
           extraOptions = [ "--name=wizarr" ];
+         };
+
+
+      ########################################
+      # Nanitor monitoring agent (optional)
+      ########################################
+      # Enables the Nanitor monitoring agent for system health checks.
+      # 
+      # Usage:
+      #   services.mediaServer.nanitor.enable = true;
+      #   services.mediaServer.nanitor.logLevel = "debug"; # optional
+      #
+      # Secrets Configuration:
+      #   The agent requires enrollment key and server URL from secrets/secrets.yaml:
+      #   
+      #   nanitor_enroll_token: "<your-enrollment-key>"
+      #   nanitor_endpoint: "https://api.nanitor.example.com"
+      #
+      #   To manage secrets:
+      #   - Edit with: nix develop -c sops secrets/secrets.yaml
+      #   - Decrypt to view: nix develop -c sops -d secrets/secrets.yaml
+      #
+      # Log Level Options: debug, info, warn, error (default: info)
+      #
+
+      services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+        enable = true;
+        logLevel = cfg.nanitor.logLevel;
+        enroll.enable = true;
+      };
+
+      # Pass enrollment key via environment variable
+      # sops-nix mounts secrets at /run/secrets/<name>. The nanitor agent
+      # reads this file to get the actual key value.
+      systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+        environment = {
+          NANITOR_ENROLL_TOKEN = config.sops.secrets.nanitor_enroll_token.path;
         };
+        preStart = let
+          endpointFile = config.sops.secrets.nanitor_endpoint.path;
+        in ''
+          if [ -f "${endpointFile}" ]; then
+            SERVER_URL=$(cat "${endpointFile}")
+            ${pkgs.nanitor-agent}/bin/nanitor-agent set-server-url "$SERVER_URL" || true
+          fi
+        '';
+      };
+
+      sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
+        mode = "0440";
+        owner = "root";
+        group = "root";
+      };
+
+      sops.secrets.nanitor_endpoint = lib.mkIf cfg.nanitor.enable {
+        mode = "0440";
+        owner = "root";
+        group = "root";
+      };
 
 
     ########################################

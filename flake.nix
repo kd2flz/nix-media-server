@@ -14,10 +14,15 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nanitor = {
+      url = "github:kd2flz/nanitor-agent";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Add `...` so future inputs don't break the flake
-  outputs = { self, nixpkgs, comin, sops-nix, ... }:
+  outputs = { self, nixpkgs, comin, sops-nix, nanitor, ... }:
   let
     system = "x86_64-linux";
     hostNames = builtins.filter (host:
@@ -26,6 +31,20 @@
       && builtins.pathExists ./hosts/${host}/hardware.nix
     ) (builtins.attrNames (builtins.readDir ./hosts));
     pkgs = nixpkgs.legacyPackages.${system};
+
+    # Overlay to add nanitor-agent package from nanitor flake
+    nanitorOverlay = final: prev: {
+      nanitor-agent = nanitor.packages.${prev.system}.nanitor-agent;
+    };
+
+    # NixosSystem with nanitor package available
+    makeNixosSystem = lib: system: modules:
+      lib.nixosSystem {
+        inherit system;
+        modules = modules ++ [
+          { nixpkgs.overlays = [ nanitorOverlay ]; }
+        ];
+      };
 
     getCominBranch = host:
       if host == "T29769" then "dev" else "main";
@@ -51,9 +70,7 @@
         name = host;
         value = let
           cominBranch = getCominBranch host;
-        in nixpkgs.lib.nixosSystem {
-          inherit system;
-          modules = [
+        in makeNixosSystem nixpkgs.lib system [
             ./modules/common.nix
             ./modules/media-server.nix
             ./modules/monitoring.nix
@@ -71,6 +88,9 @@
             # Enable comin's NixOS module
             comin.nixosModules.comin
             
+            # Enable nanitor agent NixOS module
+            nanitor.nixosModules.nanitor-agent
+            
             # Per-host comin configuration
             {
               services.comin = {
@@ -85,7 +105,6 @@
               };
             }
           ];
-        };
       }) hostNames);
   };
 }
