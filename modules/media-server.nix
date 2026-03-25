@@ -227,8 +227,22 @@ in
         enable = true;
         logLevel = cfg.nanitor.logLevel;
         enroll.enable = true;
-        enroll.key = config.sops.secrets.nanitor_enroll_token.path;
-        enroll.serverUrl = config.sops.secrets.nanitor_endpoint.path;
+      };
+
+      # Pass enrollment key via environment variable (nanitor reads from NANITOR_ENROLL_TOKEN)
+      # Server URL needs to be set via set-server-url command in preStart
+      systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+        environment = {
+          NANITOR_ENROLL_TOKEN = config.sops.secrets.nanitor_enroll_token.path;
+        };
+        preStart = let
+          endpointFile = config.sops.secrets.nanitor_endpoint.path;
+        in ''
+          if [ -f "${endpointFile}" ]; then
+            SERVER_URL=$(cat "${endpointFile}")
+            ${pkgs.nanitor-agent}/bin/nanitor-agent set-server-url "$SERVER_URL" || true
+          fi
+        '';
       };
 
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
