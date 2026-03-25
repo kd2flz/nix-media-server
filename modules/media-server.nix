@@ -211,9 +211,9 @@ in
       #   services.mediaServer.nanitor.logLevel = "debug"; # optional
       #
       # Secrets Configuration:
-      #   The agent requires enrollment token and endpoint from secrets/secrets.yaml:
+      #   The agent requires enrollment key and server URL from secrets/secrets.yaml:
       #   
-      #   nanitor_enroll_token: "<your-enrollment-token>"
+      #   nanitor_enroll_token: "<your-enrollment-key>"
       #   nanitor_endpoint: "https://api.nanitor.example.com"
       #
       #   To manage secrets:
@@ -226,9 +226,11 @@ in
       services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
         enable = true;
         logLevel = cfg.nanitor.logLevel;
+        enroll.enable = true;
+        enroll.key = config.sops.secrets.nanitor_enroll_token.path;
+        enroll.serverUrl = config.sops.secrets.nanitor_endpoint.path;
       };
 
-      # Define sops secrets for nanitor credentials
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
         mode = "0440";
         owner = "root";
@@ -239,16 +241,6 @@ in
         mode = "0440";
         owner = "root";
         group = "root";
-      };
-
-      # Pass credentials to nanitor agent via environment variables
-      systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
-        environment = {
-          NANITOR_ENROLL_TOKEN = config.sops.secrets.nanitor_enroll_token.path;
-          NANITOR_ENDPOINT = config.sops.secrets.nanitor_endpoint.path;
-        };
-        after = [ "sops-nix.service" ];
-        wants = [ "sops-nix.service" ];
       };
 
 
