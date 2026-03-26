@@ -227,23 +227,10 @@ in
         enable = true;
         logLevel = cfg.nanitor.logLevel;
         enroll.enable = true;
-      };
-
-      # Set server URL in preStart, and run signup with key from secret file
-      systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
-        preStart = let
-          endpointFile = config.sops.secrets.nanitor_endpoint.path;
-          enrollKeyFile = config.sops.secrets.nanitor_enroll_token.path;
-        in ''
-          if [ -f "${endpointFile}" ]; then
-            SERVER_URL=$(cat "${endpointFile}")
-            ${pkgs.nanitor-agent}/bin/nanitor-agent set-server-url "$SERVER_URL" || true
-          fi
-          if [ -f "${enrollKeyFile}" ]; then
-            ENROLL_KEY=$(tr -d '\n\r' < "${enrollKeyFile}")
-            ${pkgs.nanitor-agent}/bin/nanitor-agent signup --key "$ENROLL_KEY" || true
-          fi
-        '';
+        environment = {
+          NANITOR_ENROLL_TOKEN = config.sops.secrets.nanitor_enroll_token.path;
+          NANITOR_ENDPOINT = config.sops.secrets.nanitor_endpoint.path;
+        };
       };
 
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
