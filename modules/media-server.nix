@@ -229,7 +229,7 @@ in
         enroll.enable = true;
       };
 
-      # Pass enrollment key via environment variable
+      # Pass enrollment key via environment variable  
       # sops-nix mounts secrets at /run/secrets/<name>. The nanitor agent
       # reads this file to get the actual key value.
       systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
@@ -238,10 +238,17 @@ in
         };
         preStart = let
           endpointFile = config.sops.secrets.nanitor_endpoint.path;
+          enrollKeyFile = config.sops.secrets.nanitor_enroll_token.path;
         in ''
+          # Set server URL
           if [ -f "${endpointFile}" ]; then
             SERVER_URL=$(cat "${endpointFile}")
             ${pkgs.nanitor-agent}/bin/nanitor-agent set-server-url "$SERVER_URL" || true
+          fi
+          # Read enrollment key from secret file and signup
+          if [ -f "${enrollKeyFile}" ]; then
+            ENROLL_KEY=$(cat "${enrollKeyFile}")
+            ${pkgs.nanitor-agent}/bin/nanitor-agent signup --key "$ENROLL_KEY" || true
           fi
         '';
       };
