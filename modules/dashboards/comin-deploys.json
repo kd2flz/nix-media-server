@@ -8,7 +8,7 @@
   "panels": [
     {
       "type": "stat",
-      "title": "Comin Status",
+      "title": "Comin Service",
       "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
       "targets": [
         { "expr": "up{job=\"comin\"}", "refId": "A" }
@@ -16,13 +16,10 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
-            ]
-          }
+          "mappings": [
+            { "options": { "1": { "text": "Running", "color": "green" } }, "type": "value" },
+            { "options": { "0": { "text": "Down", "color": "red" } }, "type": "value" }
+          ]
         },
         "overrides": []
       },
@@ -32,27 +29,28 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       }
     },
     {
       "type": "stat",
-      "title": "Comin Version",
+      "title": "System Status",
       "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
       "targets": [
-        { "expr": "comin_build_info", "refId": "A" }
+        { "expr": "comin_need_to_reboot + comin_is_suspended", "refId": "A" }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
           "mappings": [
-            { "options": { "1": { "text": "Running" } }, "type": "value" }
+            { "options": { "0": { "text": "OK", "color": "green" } }, "type": "value" },
+            { "options": { "1": { "text": "Action Required", "color": "yellow" } }, "type": "value" }
           ]
         },
         "overrides": []
       },
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
@@ -70,13 +68,10 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
-            ]
-          }
+          "mappings": [
+            { "options": { "0": { "text": "No", "color": "green" } }, "type": "value" },
+            { "options": { "1": { "text": "Yes", "color": "red" } }, "type": "value" }
+          ]
         },
         "overrides": []
       },
@@ -86,7 +81,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       }
     },
     {
@@ -99,13 +94,10 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 }
-            ]
-          }
+          "mappings": [
+            { "options": { "0": { "text": "Active", "color": "green" } }, "type": "value" },
+            { "options": { "1": { "text": "Suspended", "color": "yellow" } }, "type": "value" }
+          ]
         },
         "overrides": []
       },
@@ -115,27 +107,23 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       }
     },
     {
       "type": "stat",
-      "title": "Last Deployment Status",
+      "title": "Last Deploy",
       "gridPos": { "x": 0, "y": 4, "w": 12, "h": 4 },
       "targets": [
-        { "expr": "comin_deployment_info{status=\"done\"}", "refId": "A", "legendFormat": "Done" },
-        { "expr": "comin_deployment_info{status=\"failed\"}", "refId": "B", "legendFormat": "Failed" }
+        { "expr": "comin_deployment_info{status=\"done\"}", "refId": "A" }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
-            ]
-          }
+          "mappings": [
+            { "options": { "1": { "text": "Success", "color": "green" } }, "type": "value" },
+            { "options": { "0": { "text": "No deploy", "color": "gray" } }, "type": "value" }
+          ]
         },
         "overrides": []
       },
@@ -145,7 +133,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       }
     },
     {
@@ -158,9 +146,19 @@
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
-          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 },
+          "mappings": {
+            "options": {
+              "succeeded": { "color": "green", "index": 0 },
+              "failed": { "color": "red", "index": 1 }
+            },
+            "type": "value"
+          }
         },
-        "overrides": []
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "succeeded" }, "properties": [{ "id": "custom.lineColor", "value": "green" }] },
+          { "matcher": { "id": "byName", "options": "failed" }, "properties": [{ "id": "custom.lineColor", "value": "red" }] }
+        ]
       },
       "options": {
         "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
