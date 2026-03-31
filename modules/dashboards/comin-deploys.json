@@ -44,7 +44,10 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "mappings": [
+            { "options": { "1": { "text": "Running" } }, "type": "value" }
+          ]
         },
         "overrides": []
       },
@@ -71,7 +74,7 @@
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              { "color": "red", "value": 0 }
             ]
           }
         },
@@ -117,36 +120,44 @@
     },
     {
       "type": "stat",
-      "title": "Last Deployment",
+      "title": "Last Deployment Status",
       "gridPos": { "x": 0, "y": 4, "w": 12, "h": 4 },
       "targets": [
-        { "expr": "comin_deployment_info", "refId": "A" }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "textMode": "value_and_name"
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Fetch Count by Status",
-      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
-      "targets": [
-        { "expr": "sum by (status) (comin_fetch_count)", "refId": "A", "legendFormat": "{{status}}" }
+        { "expr": "comin_deployment_info{status=\"done\"}", "refId": "A", "legendFormat": "Done" },
+        { "expr": "comin_deployment_info{status=\"failed\"}", "refId": "B", "legendFormat": "Failed" }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "auto"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Fetch Rate by Status (per second)",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum by (status) (rate(comin_fetch_count[5m]))", "refId": "A", "legendFormat": "{{status}}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
           "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
         },
         "overrides": []
