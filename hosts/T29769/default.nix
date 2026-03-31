@@ -40,6 +40,6 @@
     audiobookshelf.enable = true;
     jellyfin.enable = true;
     wizarr.enable = true;
-    nanitor.enable = false;
+    nanitor.enable = true;
   };
 }
