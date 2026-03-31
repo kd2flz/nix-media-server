@@ -2,7 +2,6 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.monitoring;
-  mediaCfg = config.services.mediaServer or {};
 in
 {
   options.services.monitoring = {
@@ -153,9 +152,7 @@ in
     environment.etc = {
       "grafana-dashboards/system-overview.json".source = ./dashboards/system-overview.json;
       "grafana-dashboards/comin-deploys.json".source = ./dashboards/comin-deploys.json;
-    } // lib.mkIf (mediaCfg.jellyfin.enable or false) {
       "grafana-dashboards/jellyfin.json".source = ./dashboards/jellyfin.json;
-    } // lib.mkIf (mediaCfg.audiobookshelf.enable or false) {
       "grafana-dashboards/audiobookshelf.json".source = ./dashboards/audiobookshelf.json;
     };
 
