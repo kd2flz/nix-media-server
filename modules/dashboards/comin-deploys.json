@@ -37,20 +37,41 @@
     },
     {
       "type": "stat",
-      "title": "Last Deploy (seconds ago)",
+      "title": "Comin Version",
       "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
       "targets": [
-        { "expr": "time() - comin_last_update_timestamp_seconds", "refId": "A" }
+        { "expr": "comin_build_info", "refId": "A" }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Need to Reboot",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "comin_need_to_reboot", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 3600 },
-              { "color": "red", "value": 86400 }
+              { "color": "red", "value": 1 }
             ]
           }
         },
@@ -66,34 +87,66 @@
       }
     },
     {
-      "type": "timeseries",
-      "title": "Check Runs",
-      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "type": "stat",
+      "title": "Suspended",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
       "targets": [
-        { "expr": "rate(comin_check_runs_total[5m])", "refId": "A" }
+        { "expr": "comin_is_suspended", "refId": "A" }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 }
+            ]
+          }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Last Deployment",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 4 },
+      "targets": [
+        { "expr": "comin_deployment_info", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "value_and_name"
       }
     },
     {
       "type": "timeseries",
-      "title": "Updates",
-      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "title": "Fetch Count by Status",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
       "targets": [
-        { "expr": "rate(comin_updates_total[5m])", "refId": "A" }
+        { "expr": "sum by (status) (comin_fetch_count)", "refId": "A", "legendFormat": "{{status}}" }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
+          "unit": "short",
           "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
         },
         "overrides": []
