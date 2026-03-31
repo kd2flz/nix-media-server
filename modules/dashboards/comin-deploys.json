@@ -8,30 +8,39 @@
   "panels": [
     {
       "type": "stat",
-      "title": "Comin Version",
+      "title": "Comin Status",
       "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
       "targets": [
-        { "expr": "comin_build_info", "refId": "A" }
+        { "expr": "up{job=\"comin\"}", "refId": "A" }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "short" },
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
         "overrides": []
       },
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "textMode": "value_and_name"
+        "textMode": "auto"
       }
     },
     {
       "type": "stat",
-      "title": "Last Successful Deploy",
+      "title": "Last Deploy (seconds ago)",
       "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
       "targets": [
-        { "expr": "time() - comin_last_successful_build_timestamp_seconds", "refId": "A" }
+        { "expr": "time() - comin_last_update_timestamp_seconds", "refId": "A" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -58,10 +67,29 @@
     },
     {
       "type": "timeseries",
-      "title": "Comin Runs Over Time",
+      "title": "Check Runs",
       "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
       "targets": [
         { "expr": "rate(comin_check_runs_total[5m])", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Updates",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(comin_updates_total[5m])", "refId": "A" }
       ],
       "fieldConfig": {
         "defaults": {

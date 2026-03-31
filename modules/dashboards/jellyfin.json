@@ -3,140 +3,25 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "targetBlank": true,
+      "title": "Enable Prometheus Plugin",
+      "tooltip": "Open Jellyfin Admin Dashboard",
+      "type": "link",
+      "url": "http://jellyfin.t29769.community.int:8096/web/index.html#/dashboard?tab=plugins"
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
       "type": "stat",
-      "title": "Active Sessions",
+      "title": "Jellyfin Status",
       "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
-      "targets": [
-        { "expr": "jellyfin_session_count", "refId": "A" }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 5 },
-              { "color": "red", "value": 10 }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "textMode": "auto"
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Library Items (Movies)",
-      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
-      "targets": [
-        { "expr": "jellyfin_library_item_count{type=\"Movie\"}", "refId": "A" }
-      ],
-      "fieldConfig": {
-        "defaults": { "unit": "short" },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "textMode": "auto"
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Library Items (TV)",
-      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
-      "targets": [
-        { "expr": "jellyfin_library_item_count{type=\"Episode\"}", "refId": "A" }
-      ],
-      "fieldConfig": {
-        "defaults": { "unit": "short" },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "textMode": "auto"
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Session History",
-      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
-      "targets": [
-        { "expr": "jellyfin_session_count", "refId": "A" }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
-        "tooltip": { "mode": "multi", "sort": "none" }
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Transcoding",
-      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
-      "targets": [
-        { "expr": "jellyfin_transcode_count", "refId": "A" }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
-        "tooltip": { "mode": "multi", "sort": "none" }
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Bandwidth",
-      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
-      "targets": [
-        { "expr": "rate(jellyfin_bytes_transmitted_total[5m])", "refId": "A" }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytesB_per_second",
-          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
-        "tooltip": { "mode": "multi", "sort": "none" }
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Jellyfin Health",
-      "gridPos": { "x": 12, "y": 12, "w": 6, "h": 4 },
       "targets": [
         { "expr": "up{job=\"jellyfin\"}", "refId": "A" }
       ],
@@ -161,6 +46,96 @@
         "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
         "textMode": "auto"
       }
+    },
+    {
+      "type": "stat",
+      "title": "Jellyfin Uptime",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "jellyfin_process_uptime_seconds", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Instructions",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 4 },
+      "targets": [],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "text",
+          "custom": { "align": "left" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "gray", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": [], "fields": "" },
+        "textMode": "auto"
+      },
+      "transform": "constant"
+    },
+    {
+      "type": "timeseries",
+      "title": "Active Sessions (requires Prometheus plugin)",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "jellyfin_session_count", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Transcoding (requires Prometheus plugin)",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "jellyfin_transcode_count", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
     }
   ],
   "refresh": "10s",
@@ -177,5 +152,6 @@
   "title": "Jellyfin",
   "uid": "jellyfin",
   "version": 0,
-  "weekStart": ""
+  "weekStart": "",
+  "description": "To enable Jellyfin metrics: Install the Prometheus plugin from the Jellyfin plugin catalog, then enable 'OpenMetrics' in the plugin settings."
 }

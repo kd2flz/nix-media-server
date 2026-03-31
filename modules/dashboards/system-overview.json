@@ -97,10 +97,10 @@
     },
     {
       "type": "timeseries",
-      "title": "CPU History",
+      "title": "CPU Usage Over Time",
       "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
       "targets": [
-        { "expr": "100 - (avg by (mode) (rate(node_cpu_seconds_total[5m])) * 100)", "refId": "A" }
+        { "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "refId": "A", "legendFormat": "CPU Usage" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -157,10 +157,10 @@
     },
     {
       "type": "timeseries",
-      "title": "Caddy Requests/sec",
+      "title": "Caddy Requests",
       "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
       "targets": [
-        { "expr": "rate(caddy_http_requests_total[5m])", "refId": "A" }
+        { "expr": "sum(rate(caddy_http_requests_total[5m]))", "refId": "A", "legendFormat": "Requests/sec" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -175,15 +175,44 @@
       }
     },
     {
-      "type": "timeseries",
-      "title": "Caddy Request Latency (p99)",
-      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "type": "stat",
+      "title": "Caddy Status",
+      "gridPos": { "x": 0, "y": 20, "w": 6, "h": 4 },
       "targets": [
-        { "expr": "histogram_quantile(0.99, sum(rate(caddy_http_request_duration_seconds_bucket[5m])) by (le))", "refId": "A" }
+        { "expr": "up{job=\"caddy\"}", "refId": "A" }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "auto"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Caddy Response Codes",
+      "gridPos": { "x": 6, "y": 20, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (status) (rate(caddy_http_requests_total[5m]))", "refId": "A", "legendFormat": "{{status}}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
           "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
         },
         "overrides": []
@@ -196,7 +225,7 @@
     {
       "type": "stat",
       "title": "SMART Health",
-      "gridPos": { "x": 12, "y": 20, "w": 6, "h": 4 },
+      "gridPos": { "x": 18, "y": 20, "w": 6, "h": 4 },
       "targets": [
         { "expr": "count(smartctl_health_ok == 1)", "refId": "A" }
       ],
@@ -220,6 +249,26 @@
         "orientation": "auto",
         "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
         "textMode": "auto"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk Space",
+      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "node_filesystem_avail_bytes{mountpoint=\"/\"}", "refId": "A", "legendFormat": "Available" },
+        { "expr": "node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_avail_bytes{mountpoint=\"/\"}", "refId": "B", "legendFormat": "Used" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "none" }
       }
     }
   ],
