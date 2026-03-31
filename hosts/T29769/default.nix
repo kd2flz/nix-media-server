@@ -37,7 +37,7 @@
       audiobooks = "/srv/media/audiobooks";
     };
 
-    audiobookshelf.enable = true;
+    audiobookshelf.enable = false;
     jellyfin.enable = true;
     wizarr.enable = true;
     nanitor.enable = true;
