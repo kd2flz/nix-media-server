@@ -1,7 +1,8 @@
-
+ 
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.monitoring;
+  mediaCfg = config.services.mediaServer or {};
 in
 {
   options.services.monitoring = {
@@ -26,14 +27,11 @@ in
     };
 
     # Blackbox exporter for Audiobookshelf HTTP probe
-
-    # Blackbox exporter (probes Audiobookshelf HTTP endpoint)
     services.prometheus.exporters.blackbox = {
       enable = true;
       listenAddress = "127.0.0.1";
       port = 9115;
 
-      # REQUIRED: configuration for probe modules
       configFile = pkgs.writeText "blackbox.yml" ''
         modules:
           http_2xx:
@@ -41,10 +39,14 @@ in
             timeout: 5s
             http:
               preferred_ip_protocol: "ip4"
-              # Accept 200 + common redirects if you want:
-              # valid_status_codes: [200, 301, 302, 308]
-              # follow_redirects: true
       '';
+    };
+
+    # SMART metrics
+    services.prometheus.exporters.smartctl = {
+      enable = true;
+      listenAddress = "127.0.0.1";
+      port = 9101;
     };
 
 
@@ -55,13 +57,20 @@ in
       enable = true;
       listenAddress = "127.0.0.1";
       port = 9001;
-      # retentionTime = "15d";
       scrapeConfigs = [
         # Node exporter
         {
           job_name = "node";
           static_configs = [
             { targets = [ "127.0.0.1:${toString config.services.prometheus.exporters.node.port}" ]; }
+          ];
+        }
+
+        # SMARTctl exporter
+        {
+          job_name = "smartctl";
+          static_configs = [
+            { targets = [ "127.0.0.1:${toString config.services.prometheus.exporters.smartctl.port}" ]; }
           ];
         }
 
@@ -109,9 +118,39 @@ in
       enable = true;
       security = {
         adminUser = "admin";
+        # TODO: Move to sops secrets
         adminPassword = "admin";
       };
-      # Add Prometheus DS in UI: http://127.0.0.1:9001
+      provision = {
+        enable = true;
+        dashboards.settings.providers = [{
+          name = "NixOS Provisioned";
+          disableDeletion = true;
+          options = {
+            path = "/etc/grafana-dashboards";
+            foldersFromFilesStructure = true;
+          };
+        }];
+        datasources.settings.datasources = [{
+          name = "Prometheus";
+          type = "prometheus";
+          url = "http://${config.services.prometheus.listenAddress}:${toString config.services.prometheus.port}";
+          isDefault = true;
+          editable = false;
+        }];
+      };
+    };
+
+    #############################################
+    # Provisioned Dashboards
+    #############################################
+    environment.etc = {
+      "grafana-dashboards/system-overview.json".source = ./dashboards/system-overview.json;
+      "grafana-dashboards/comin-deploys.json".source = ./dashboards/comin-deploys.json;
+    } // lib.mkIf (mediaCfg.jellyfin.enable or false) {
+      "grafana-dashboards/jellyfin.json".source = ./dashboards/jellyfin.json;
+    } // lib.mkIf (mediaCfg.audiobookshelf.enable or false) {
+      "grafana-dashboards/audiobookshelf.json".source = ./dashboards/audiobookshelf.json;
     };
 
     #############################################
