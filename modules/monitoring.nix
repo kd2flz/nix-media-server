@@ -18,14 +18,12 @@ in
     #############################################
     # Exporters
     #############################################
-    # Host metrics
     services.prometheus.exporters.node = {
       enable = true;
       listenAddress = "127.0.0.1";
       port = 9100;
     };
 
-    # Blackbox exporter for Audiobookshelf HTTP probe
     services.prometheus.exporters.blackbox = {
       enable = true;
       listenAddress = "127.0.0.1";
@@ -41,7 +39,6 @@ in
       '';
     };
 
-    # SMART metrics
     services.prometheus.exporters.smartctl = {
       enable = true;
       listenAddress = "127.0.0.1";
@@ -57,37 +54,28 @@ in
       listenAddress = "127.0.0.1";
       port = 9001;
       scrapeConfigs = [
-        # Node exporter
         {
           job_name = "node";
           static_configs = [
             { targets = [ "127.0.0.1:${toString config.services.prometheus.exporters.node.port}" ]; }
           ];
         }
-
-        # SMARTctl exporter
         {
           job_name = "smartctl";
           static_configs = [
             { targets = [ "127.0.0.1:${toString config.services.prometheus.exporters.smartctl.port}" ]; }
           ];
         }
-
-        # Caddy metrics (admin API /metrics)
         {
           job_name = "caddy";
           metrics_path = "/metrics";
           static_configs = [ { targets = [ "127.0.0.1:2019" ]; } ];
         }
-
-        # Jellyfin built-in metrics (/metrics)
         {
           job_name = "jellyfin";
           metrics_path = "/metrics";
           static_configs = [ { targets = [ "127.0.0.1:8096" ]; } ];
         }
-
-        # Audiobookshelf via Blackbox (HTTP 200 + latency)
         {
           job_name = "audiobookshelf";
           metrics_path = "/probe";
@@ -101,8 +89,6 @@ in
             { target_label = "__address__"; replacement = "127.0.0.1:9115"; }
           ];
         }
-
-        # Comin exporter (built-in)
         {
           job_name = "comin";
           static_configs = [ { targets = [ "127.0.0.1:4243" ]; } ];
@@ -142,6 +128,133 @@ in
           isDefault = true;
           editable = false;
         }];
+        alerting.rules.settings = {
+          apiVersion = 1;
+          groups = [{
+            name = "System Alerts";
+            folder = "NixOS";
+            interval = "60s";
+            rules = [
+              {
+                uid = "high-cpu";
+                title = "High CPU Usage";
+                condition = "A";
+                for = "5m";
+                data = [{
+                  refId = "A";
+                  datasourceUid = "prometheus";
+                  model = {
+                    refId = "A";
+                    expr = ''100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90'';
+                    type = "prometheus";
+                  };
+                }];
+                annotations = { summary = "CPU usage is above 90%"; description = "CPU usage on {{ $labels.instance }} has been above 90% for 5 minutes"; };
+                labels = { severity = "warning"; };
+              }
+              {
+                uid = "high-memory";
+                title = "High Memory Usage";
+                condition = "A";
+                for = "5m";
+                data = [{
+                  refId = "A";
+                  datasourceUid = "prometheus";
+                  model = {
+                    refId = "A";
+                    expr =''(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90'';
+                    type = "prometheus";
+                  };
+                }];
+                annotations = { summary = "Memory usage is above 90%"; description = "Memory usage on {{ $labels.instance }} has been above 90% for 5 minutes"; };
+                labels = { severity = "warning"; };
+              }
+              {
+                uid = "disk-space-low";
+                title = "Low Disk Space";
+                condition = "A";
+                for = "10m";
+                data = [{
+                  refId = "A";
+                  datasourceUid = "prometheus";
+                  model = {
+                    refId = "A";
+                    expr =''(1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 90'';
+                    type = "prometheus";
+                  };
+                }];
+                annotations = { summary = "Disk usage is above 90%"; description = "Disk usage on {{ $labels.instance }} / has been above 90% for 10 minutes"; };
+                labels = { severity = "warning"; };
+              }
+              {
+                uid = "comin-down";
+                title = "Comin Down";
+                condition = "A";
+                for = "2m";
+                data = [{
+                  refId = "A";
+                  datasourceUid = "prometheus";
+                  model = {
+                    refId = "A";
+                    expr = ''up{job="comin"} == 0'';
+                    type = "prometheus";
+                  };
+                }];
+                annotations = { summary = "Comin service is down"; description = "Comin exporter on {{ $labels.instance }} is not responding"; };
+                labels = { severity = "critical"; };
+              }
+              {
+                uid = "comin-failed-deploy";
+                title = "Comin Deployment Failed";
+                condition = "A";
+                for = "1m";
+                data = [{
+                  refId = "A";
+                  datasourceUid = "prometheus";
+                  model = {
+                    refId = "A";
+                    expr = ''comin_deployment_info{status="failed"} == 1'';
+                    type = "prometheus";
+                  };
+                }];
+                annotations = { summary = "Comin deployment failed"; description = "Last deployment on {{ $labels.instance }} failed"; };
+                labels = { severity = "critical"; };
+              }
+            ] ++ lib.optionals (mediaCfg.jellyfin.enable or false) [{
+              uid = "jellyfin-down";
+              title = "Jellyfin Down";
+              condition = "A";
+              for = "2m";
+              data = [{
+                refId = "A";
+                datasourceUid = "prometheus";
+                model = {
+                  refId = "A";
+                  expr = ''up{job="jellyfin"} == 0'';
+                  type = "prometheus";
+                };
+              }];
+              annotations = { summary = "Jellyfin service is down"; description = "Jellyfin on {{ $labels.instance }} is not responding"; };
+              labels = { severity = "warning"; };
+            }] ++ lib.optionals (mediaCfg.audiobookshelf.enable or false) [{
+              uid = "audiobookshelf-down";
+              title = "Audiobookshelf Down";
+              condition = "A";
+              for = "2m";
+              data = [{
+                refId = "A";
+                datasourceUid = "prometheus";
+                model = {
+                  refId = "A";
+                  expr = ''probe_success{job="audiobookshelf"} == 0'';
+                  type = "prometheus";
+                };
+              }];
+              annotations = { summary = "Audiobookshelf service is down"; description = "Audiobookshelf on {{ $labels.instance }} is not responding"; };
+              labels = { severity = "warning"; };
+            }];
+          }];
+        };
       };
     };
 
