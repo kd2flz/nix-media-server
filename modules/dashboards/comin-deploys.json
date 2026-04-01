@@ -115,7 +115,7 @@
       "title": "Last Deploy",
       "gridPos": { "x": 0, "y": 4, "w": 12, "h": 4 },
       "targets": [
-        { "expr": "comin_deployment_info{status=\"done\"}", "refId": "A" }
+        { "expr": "comin_deployment_info{status=\"done\"}", "refId": "A", "legendFormat": "{{commit_id}}" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -123,9 +123,24 @@
           "mappings": [
             { "options": { "1": { "text": "Success", "color": "green" } }, "type": "value" },
             { "options": { "0": { "text": "No deploy", "color": "gray" } }, "type": "value" }
-          ]
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "gray", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Success" },
+            "properties": [
+              { "id": "links", "value": [] },
+              { "id": "custom.hidden", "value": false }
+            ]
+          }
+        ]
       },
       "options": {
         "colorMode": "background",
