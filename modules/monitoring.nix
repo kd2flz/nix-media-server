@@ -139,7 +139,7 @@ in
       "grafana-dashboards/comin-deploys.json".source = ./dashboards/comin-deploys.json;
       "grafana-dashboards/jellyfin.json".source = ./dashboards/jellyfin.json;
       "grafana-dashboards/audiobookshelf.json".source = ./dashboards/audiobookshelf.json;
-      "grafana-provisioning/alerting/rules.yaml".source = ./alerting-rules.yaml;
+      "grafana/provisioning/alerting/rules.yaml".source = ./alerting-rules.yaml;
     };
 
     #############################################
