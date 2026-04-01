@@ -1,149 +1,7 @@
-  
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.monitoring;
   mediaCfg = config.services.mediaServer or {};
-  alertRules = [
-    {
-      uid = "high-cpu";
-      title = "High CPU Usage";
-      condition = "A";
-      for = "5m";
-      data = [{
-        refId = "A";
-        datasourceUid = "prometheus";
-        model = {
-          refId = "A";
-          expr = "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) > 90";
-          type = "prometheus";
-        };
-      }];
-      annotations = {
-        summary = "CPU usage is above 90%";
-        description = "CPU usage on {{ $labels.instance }} has been above 90% for 5 minutes";
-      };
-      labels = { severity = "warning"; };
-    }
-    {
-      uid = "high-memory";
-      title = "High Memory Usage";
-      condition = "A";
-      for = "5m";
-      data = [{
-        refId = "A";
-        datasourceUid = "prometheus";
-        model = {
-          refId = "A";
-          expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90";
-          type = "prometheus";
-        };
-      }];
-      annotations = {
-        summary = "Memory usage is above 90%";
-        description = "Memory usage on {{ $labels.instance }} has been above 90% for 5 minutes";
-      };
-      labels = { severity = "warning"; };
-    }
-    {
-      uid = "disk-space-low";
-      title = "Low Disk Space";
-      condition = "A";
-      for = "10m";
-      data = [{
-        refId = "A";
-        datasourceUid = "prometheus";
-        model = {
-          refId = "A";
-          expr = "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100 > 90";
-          type = "prometheus";
-        };
-      }];
-      annotations = {
-        summary = "Disk usage is above 90%";
-        description = "Disk usage on {{ $labels.instance }} / has been above 90% for 10 minutes";
-      };
-      labels = { severity = "warning"; };
-    }
-    {
-      uid = "comin-down";
-      title = "Comin Down";
-      condition = "A";
-      for = "2m";
-      data = [{
-        refId = "A";
-        datasourceUid = "prometheus";
-        model = {
-          refId = "A";
-          expr = "up{job=\"comin\"} == 0";
-          type = "prometheus";
-        };
-      }];
-      annotations = {
-        summary = "Comin service is down";
-        description = "Comin exporter on {{ $labels.instance }} is not responding";
-      };
-      labels = { severity = "critical"; };
-    }
-    {
-      uid = "comin-failed-deploy";
-      title = "Comin Deployment Failed";
-      condition = "A";
-      for = "1m";
-      data = [{
-        refId = "A";
-        datasourceUid = "prometheus";
-        model = {
-          refId = "A";
-          expr = "comin_deployment_info{status=\"failed\"} == 1";
-          type = "prometheus";
-        };
-      }];
-      annotations = {
-        summary = "Comin deployment failed";
-        description = "Last deployment on {{ $labels.instance }} failed";
-      };
-      labels = { severity = "critical"; };
-    }
-  ] ++ lib.optionals (mediaCfg.jellyfin.enable or false) [{
-      uid = "jellyfin-down";
-      title = "Jellyfin Down";
-      condition = "A";
-      for = "2m";
-      data = [{
-        refId = "A";
-        datasourceUid = "prometheus";
-        model = {
-          refId = "A";
-          expr = "up{job=\"jellyfin\"} == 0";
-          type = "prometheus";
-        };
-      }];
-      annotations = {
-        summary = "Jellyfin service is down";
-        description = "Jellyfin on {{ $labels.instance }} is not responding";
-      };
-      labels = { severity = "warning"; };
-    }]
-  ++ lib.optionals (mediaCfg.audiobookshelf.enable or false) [{
-      uid = "audiobookshelf-down";
-      title = "Audiobookshelf Down";
-      condition = "A";
-      for = "2m";
-      data = [{
-        refId = "A";
-        datasourceUid = "prometheus";
-        model = {
-          refId = "A";
-          expr = "probe_success{job=\"audiobookshelf\"} == 0";
-          type = "prometheus";
-        };
-      }];
-      annotations = {
-        summary = "Audiobookshelf service is down";
-        description = "Audiobookshelf on {{ $labels.instance }} is not responding";
-      };
-      labels = { severity = "warning"; };
-    }];
 in
 {
   options.services.monitoring = {
@@ -267,37 +125,34 @@ in
           admin_password = "admin";
         };
       };
-      provision = lib.mkMerge [
-        {
-          enable = true;
-          dashboards.settings.providers = [{
-            name = "NixOS Provisioned";
-            disableDeletion = true;
-            options = {
-              path = "/etc/grafana-dashboards";
-              foldersFromFilesStructure = true;
-            };
-          }];
-          datasources.settings.datasources = [{
-            name = "Prometheus";
-            type = "prometheus";
-            url = "http://${config.services.prometheus.listenAddress}:${toString config.services.prometheus.port}";
-            isDefault = true;
-            editable = false;
-          }];
-        }
-        {
-          alerting.rules.settings = {
-            apiVersion = 1;
-            groups = [{
-              name = "System Alerts";
-              folder = "NixOS";
-              interval = "60s";
-              rules = alertRules;
-            }];
+      provision = {
+        enable = true;
+        dashboards.settings.providers = [{
+          name = "NixOS Provisioned";
+          disableDeletion = true;
+          options = {
+            path = "/etc/grafana-dashboards";
+            foldersFromFilesStructure = true;
           };
-        }
-      ];
+        }];
+        datasources.settings.datasources = [{
+          name = "Prometheus";
+          type = "prometheus";
+          url = "http://${config.services.prometheus.listenAddress}:${toString config.services.prometheus.port}";
+          isDefault = true;
+          editable = false;
+        }];
+      };
+    };
+
+    #############################################
+    # Provisioned Dashboards
+    #############################################
+    environment.etc = {
+      "grafana-dashboards/system-overview.json".source = ./dashboards/system-overview.json;
+      "grafana-dashboards/comin-deploys.json".source = ./dashboards/comin-deploys.json;
+      "grafana-dashboards/jellyfin.json".source = ./dashboards/jellyfin.json;
+      "grafana-dashboards/audiobookshelf.json".source = ./dashboards/audiobookshelf.json;
     };
 
     #############################################
