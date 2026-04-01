@@ -4,6 +4,7 @@ groups:
   - name: system_alerts
     folder: General
     interval: 30s
+    orgId: 1
     rules:
       - uid: high_cpu
         title: High CPU
