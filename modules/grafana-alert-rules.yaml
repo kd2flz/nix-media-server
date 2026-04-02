@@ -4,8 +4,7 @@ groups:
     folder: monitoring
     interval: 30s
     rules:
-      - uid: high-cpu
-        title: High CPU
+      - title: High CPU
         condition: A
         data:
           - refId: A
@@ -26,8 +25,7 @@ groups:
         labels:
           severity: warning
 
-      - uid: high-memory
-        title: High Memory
+      - title: High Memory
         condition: A
         data:
           - refId: A
@@ -48,8 +46,7 @@ groups:
         labels:
           severity: warning
 
-      - uid: disk-space
-        title: Disk Space Critical
+      - title: Disk Space Critical
         condition: A
         data:
           - refId: A
@@ -70,8 +67,7 @@ groups:
         labels:
           severity: critical
 
-      - uid: comin-down
-        title: Comin Down
+      - title: Comin Down
         condition: A
         data:
           - refId: A
@@ -92,8 +88,7 @@ groups:
         labels:
           severity: critical
 
-      - uid: jellyfin-down
-        title: Jellyfin Down
+      - title: Jellyfin Down
         condition: A
         data:
           - refId: A
@@ -114,8 +109,7 @@ groups:
         labels:
           severity: critical
 
-      - uid: audiobookshelf-down
-        title: Audiobookshelf Down
+      - title: Audiobookshelf Down
         condition: A
         data:
           - refId: A

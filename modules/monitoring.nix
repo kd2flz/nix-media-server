@@ -160,19 +160,13 @@ in
           {
             name = "Prometheus";
             type = "prometheus";
-            uid = "prometheus";
-            url = "http://${config.services.prometheus.listenAddress}:${toString config.services.prometheus.port}";
-            access = "Proxy";
+            url = "http://127.0.0.1:9001";
             isDefault = true;
-            editable = false;
           }
           {
             name = "Alertmanager";
             type = "alertmanager";
-            uid = "alertmanager";
-            url = "http://localhost:${toString config.services.prometheus.alertmanager.port}";
-            access = "Proxy";
-            editable = false;
+            url = "http://localhost:9093";
             jsonData = {
               implementation = "prometheus";
             };
@@ -186,7 +180,6 @@ in
               name = "default";
               receivers = [
                 {
-                  uid = "default-receiver";
                   type = "prometheus-alertmanager";
                   settings.url = "http://localhost:${toString config.services.prometheus.alertmanager.port}";
                 }
