@@ -179,6 +179,24 @@ in
             };
           }
         ];
+
+        alerting.contactPoints.settings = {
+          apiVersion = 1;
+          contactPoints = [
+            {
+              name = "default";
+              receivers = [
+                {
+                  uid = "default-receiver";
+                  type = "prometheus-alertmanager";
+                  settings.url = "http://localhost:${toString config.services.prometheus.alertmanager.port}";
+                }
+              ];
+            }
+          ];
+        };
+
+        alerting.rules.path = ./grafana-alert-rules.yaml;
       };
     };
 
