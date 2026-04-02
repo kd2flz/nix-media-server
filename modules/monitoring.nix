@@ -47,12 +47,26 @@ in
 
 
     #############################################
-    # Prometheus (scrape targets)
+    # Prometheus (scrape targets + alerts)
     #############################################
     services.prometheus = {
       enable = true;
       listenAddress = "127.0.0.1";
       port = 9001;
+      globalConfig = {
+        evaluation_interval = "30s";
+        scrape_interval = "30s";
+      };
+      alertmanagers = [
+        {
+          static_configs = [
+            { targets = [ "localhost:${toString config.services.prometheus.alertmanager.port}" ]; }
+          ];
+        }
+      ];
+      ruleFiles = [
+        ./alert-rules.yaml
+      ];
       scrapeConfigs = [
         {
           job_name = "node";
@@ -97,6 +111,27 @@ in
     };
 
     #############################################
+    # Prometheus Alertmanager
+    #############################################
+    services.prometheus.alertmanager = {
+      enable = true;
+      port = 9093;
+      configuration = lib.mkForce {
+        global = { };
+        route = {
+          group_by = ["alertname"];
+          group_wait = "30s";
+          group_interval = "5m";
+          repeat_interval = "4h";
+          receiver = "default";
+        };
+        receivers = [
+          { name = "default"; }
+        ];
+      };
+    };
+
+    #############################################
     # Grafana
     #############################################
     services.grafana = {
@@ -121,25 +156,35 @@ in
             foldersFromFilesStructure = true;
           };
         }];
-        datasources.settings.datasources = [{
-          name = "Prometheus";
-          type = "prometheus";
-          url = "http://${config.services.prometheus.listenAddress}:${toString config.services.prometheus.port}";
-          isDefault = true;
-          editable = false;
-        }];
+        datasources.settings.datasources = [
+          {
+            name = "Prometheus";
+            type = "prometheus";
+            url = "http://${config.services.prometheus.listenAddress}:${toString config.services.prometheus.port}";
+            isDefault = true;
+            editable = false;
+          }
+          {
+            name = "Alertmanager";
+            type = "alertmanager";
+            url = "http://localhost:${toString config.services.prometheus.alertmanager.port}";
+            editable = false;
+            jsonData = {
+              implementation = "prometheus";
+            };
+          }
+        ];
       };
     };
 
     #############################################
-    # Provisioned Dashboards & Alerts
+    # Provisioned Dashboards
     #############################################
     environment.etc = {
       "grafana-dashboards/system-overview.json".source = ./dashboards/system-overview.json;
       "grafana-dashboards/comin-deploys.json".source = ./dashboards/comin-deploys.json;
       "grafana-dashboards/jellyfin.json".source = ./dashboards/jellyfin.json;
       "grafana-dashboards/audiobookshelf.json".source = ./dashboards/audiobookshelf.json;
-      "grafana/provisioning/alerting/rules.yaml".text = builtins.readFile ./alerting-rules.yaml;
     };
 
     #############################################
@@ -172,6 +217,6 @@ in
     #############################################
     # Firewall
     #############################################
-    networking.firewall.allowedTCPPorts = [ 3000 9001 ];
+    networking.firewall.allowedTCPPorts = [ 3000 9001 9093 ];
   };
 }
