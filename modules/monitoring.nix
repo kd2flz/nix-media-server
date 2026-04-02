@@ -160,6 +160,7 @@ in
           {
             name = "Prometheus";
             type = "prometheus";
+            uid = "prometheus";
             url = "http://${config.services.prometheus.listenAddress}:${toString config.services.prometheus.port}";
             isDefault = true;
             editable = false;
@@ -167,6 +168,7 @@ in
           {
             name = "Alertmanager";
             type = "alertmanager";
+            uid = "alertmanager";
             url = "http://localhost:${toString config.services.prometheus.alertmanager.port}";
             editable = false;
             jsonData = {
