@@ -8,17 +8,46 @@ groups:
     rules:
       - uid: high_cpu
         title: High CPU
-        condition: A
+        condition: B
         data:
           - refId: A
-            queryType: ''
+            queryType: ""
             relativeTimeRange:
               from: 300
               to: 0
-            datasourceUid: prometheus
+            datasourceUid: PBFA97CFB590B2093
             model:
               expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               refId: A
+          - refId: B
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 90
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
         noDataState: NoData
         execErrState: Alerting
         for: 5m
@@ -30,17 +59,46 @@ groups:
 
       - uid: high_memory
         title: High Memory
-        condition: A
+        condition: B
         data:
           - refId: A
-            queryType: ''
+            queryType: ""
             relativeTimeRange:
               from: 300
               to: 0
-            datasourceUid: prometheus
+            datasourceUid: PBFA97CFB590B2093
             model:
               expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               refId: A
+          - refId: B
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 90
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
         noDataState: NoData
         execErrState: Alerting
         for: 5m
@@ -52,17 +110,46 @@ groups:
 
       - uid: disk_space
         title: Disk Space Critical
-        condition: A
+        condition: B
         data:
           - refId: A
-            queryType: ''
+            queryType: ""
             relativeTimeRange:
               from: 300
               to: 0
-            datasourceUid: prometheus
+            datasourceUid: PBFA97CFB590B2093
             model:
               expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 90
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               refId: A
+          - refId: B
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 90
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
         noDataState: NoData
         execErrState: Alerting
         for: 5m
@@ -74,17 +161,46 @@ groups:
 
       - uid: comin_down
         title: Comin Down
-        condition: A
+        condition: B
         data:
           - refId: A
-            queryType: ''
+            queryType: ""
             relativeTimeRange:
               from: 120
               to: 0
-            datasourceUid: prometheus
+            datasourceUid: PBFA97CFB590B2093
             model:
               expr: up{job="comin"} == 0
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               refId: A
+          - refId: B
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
         noDataState: NoData
         execErrState: Alerting
         for: 2m
@@ -96,17 +212,46 @@ groups:
 
       - uid: comin_failed
         title: Comin Failed
-        condition: A
+        condition: B
         data:
           - refId: A
-            queryType: ''
+            queryType: ""
             relativeTimeRange:
               from: 60
               to: 0
-            datasourceUid: prometheus
+            datasourceUid: PBFA97CFB590B2093
             model:
               expr: comin_deployment_info{status="failed"} == 1
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               refId: A
+          - refId: B
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
         noDataState: NoData
         execErrState: Alerting
         for: 1m
@@ -118,17 +263,46 @@ groups:
 
       - uid: jellyfin_down
         title: Jellyfin Down
-        condition: A
+        condition: B
         data:
           - refId: A
-            queryType: ''
+            queryType: ""
             relativeTimeRange:
               from: 120
               to: 0
-            datasourceUid: prometheus
+            datasourceUid: PBFA97CFB590B2093
             model:
               expr: up{job="jellyfin"} == 0
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               refId: A
+          - refId: B
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
         noDataState: NoData
         execErrState: Alerting
         for: 2m
@@ -140,17 +314,46 @@ groups:
 
       - uid: audiobookshelf_down
         title: Audiobookshelf Down
-        condition: A
+        condition: B
         data:
           - refId: A
-            queryType: ''
+            queryType: ""
             relativeTimeRange:
               from: 120
               to: 0
-            datasourceUid: prometheus
+            datasourceUid: PBFA97CFB590B2093
             model:
               expr: probe_success{job="audiobookshelf"} == 0
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               refId: A
+          - refId: B
+            queryType: ""
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
         noDataState: NoData
         execErrState: Alerting
         for: 2m
