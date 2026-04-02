@@ -145,6 +145,11 @@ in
           admin_user = "admin";
           admin_password = "admin";
         };
+        alerting = {
+          alertmanagers = [{
+            url = "http://localhost:${toString config.services.prometheus.alertmanager.port}";
+          }];
+        };
       };
       provision = {
         enable = true;
