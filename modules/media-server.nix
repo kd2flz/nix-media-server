@@ -110,22 +110,9 @@ in
       openFirewall = true;
     };
 
-    systemd.services.jellyfin-enable-metrics = lib.mkIf cfg.jellyfin.enable {
-      description = "Enable Jellyfin Prometheus metrics";
-      after = [ "jellyfin.service" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.gnused}/bin/sed -i 's/<EnableMetrics>false<\\/EnableMetrics>/<EnableMetrics>true<\\/EnableMetrics>/g' /var/lib/jellyfin/config/system.xml";
-      };
-    };
-
-    systemd.timers.jellyfin-enable-metrics = lib.mkIf cfg.jellyfin.enable {
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnBootSec = "1min";
-        Unit = "jellyfin-enable-metrics.service";
-      };
-    };
+    systemd.services.jellyfin.serviceConfig.PreStart = lib.mkIf cfg.jellyfin.enable (lib.mkAfter ''
+      ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
+    '');
 
     # Optional: provide the ffmpeg build Jellyfin expects
     environment.systemPackages = lib.mkIf cfg.jellyfin.enable (with pkgs; [
