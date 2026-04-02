@@ -162,6 +162,7 @@ in
             type = "prometheus";
             uid = "prometheus";
             url = "http://${config.services.prometheus.listenAddress}:${toString config.services.prometheus.port}";
+            access = "Proxy";
             isDefault = true;
             editable = false;
           }
@@ -170,6 +171,7 @@ in
             type = "alertmanager";
             uid = "alertmanager";
             url = "http://localhost:${toString config.services.prometheus.alertmanager.port}";
+            access = "Proxy";
             editable = false;
             jsonData = {
               implementation = "prometheus";
