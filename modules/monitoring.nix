@@ -165,21 +165,6 @@ in
             isDefault = true;
           }
         ];
-        alerting.contactPoints.settings = {
-          apiVersion = 1;
-          contactPoints = [
-            {
-              name = "default";
-              receivers = [
-                {
-                  type = "prometheus-alertmanager";
-                  settings.url = "http://localhost:9093";
-                }
-              ];
-            }
-          ];
-        };
-        alerting.rules.path = ./grafana-alert-rules.yaml;
       };
     };
 
