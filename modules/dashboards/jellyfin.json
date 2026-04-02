@@ -10,18 +10,18 @@
       "includeVars": false,
       "keepTime": false,
       "targetBlank": true,
-      "title": "Enable Prometheus Plugin",
+      "title": "Jellyfin Admin",
       "tooltip": "Open Jellyfin Admin Dashboard",
       "type": "link",
-      "url": "http://jellyfin.t29769.community.int:8096/web/index.html#/dashboard?tab=plugins"
+      "url": "http://jellyfin.t29769.community.int:8096/web/index.html#/dashboard"
     }
   ],
   "liveNow": false,
   "panels": [
     {
       "type": "stat",
-      "title": "Jellyfin Status",
-      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "title": "Status",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 3 },
       "targets": [
         { "expr": "up{job=\"jellyfin\"}", "refId": "A" }
       ],
@@ -49,10 +49,10 @@
     },
     {
       "type": "stat",
-      "title": "Jellyfin Uptime",
-      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "title": "Uptime",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 3 },
       "targets": [
-        { "expr": "jellyfin_process_uptime_seconds", "refId": "A" }
+        { "expr": "process_uptime_seconds", "refId": "A" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -77,53 +77,151 @@
     },
     {
       "type": "stat",
-      "title": "Instructions",
-      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 4 },
-      "targets": [],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "text",
-          "custom": { "align": "left" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "gray", "value": null }] }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "values": false, "calcs": [], "fields": "" },
-        "textMode": "auto"
-      },
-      "transform": "constant"
-    },
-    {
-      "type": "timeseries",
-      "title": "Active Sessions (requires Prometheus plugin)",
-      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "title": "Active Connections",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 3 },
       "targets": [
-        { "expr": "jellyfin_session_count", "refId": "A" }
+        { "expr": "sum(microsoft_aspnetcore_server_kestrel_kestrel_active_connections)", "refId": "A" }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 20 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Requests/sec",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 3 },
+      "targets": [
+        { "expr": "rate(http_requests_received_total[1m])", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "CPU Usage",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 3 },
+      "targets": [
+        { "expr": "system_runtime_cpu_usage", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 0.8 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Memory (Working Set)",
+      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 3 },
+      "targets": [
+        { "expr": "system_runtime_working_set", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 500000000 },
+              { "color": "red", "value": 1000000000 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "auto"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Request Rate",
+      "gridPos": { "x": 0, "y": 3, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(http_requests_received_total[5m])) by (code, method)", "legendFormat": "{{code}} {{method}}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
           "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["mean", "max"] },
         "tooltip": { "mode": "multi", "sort": "none" }
       }
     },
     {
       "type": "timeseries",
-      "title": "Transcoding (requires Prometheus plugin)",
-      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "title": "Active Connections",
+      "gridPos": { "x": 12, "y": 3, "w": 12, "h": 8 },
       "targets": [
-        { "expr": "jellyfin_transcode_count", "refId": "A" }
+        { "expr": "sum(microsoft_aspnetcore_server_kestrel_kestrel_active_connections)", "legendFormat": "Active", "refId": "A" },
+        { "expr": "sum(microsoft_aspnetcore_server_kestrel_kestrel_queued_connections)", "legendFormat": "Queued", "refId": "B" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -133,7 +231,129 @@
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": [] },
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Request Duration",
+      "gridPos": { "x": 0, "y": 11, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p90", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p99", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Usage",
+      "gridPos": { "x": 12, "y": 11, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "system_runtime_working_set", "legendFormat": "Working Set", "refId": "A" },
+        { "expr": "system_runtime_gc_heap_size", "legendFormat": "GC Heap", "refId": "B" },
+        { "expr": "dotnet_total_memory_bytes", "legendFormat": ".NET Total", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "GC Activity",
+      "gridPos": { "x": 0, "y": 19, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(system_runtime_gen_0_gc_count_total[5m])", "legendFormat": "Gen 0/s", "refId": "A" },
+        { "expr": "rate(system_runtime_gen_1_gc_count_total[5m])", "legendFormat": "Gen 1/s", "refId": "B" },
+        { "expr": "rate(system_runtime_gen_2_gc_count_total[5m])", "legendFormat": "Gen 2/s", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU Usage",
+      "gridPos": { "x": 12, "y": 19, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(process_cpu_seconds_total[1m])", "legendFormat": "CPU", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Thread Pool",
+      "gridPos": { "x": 0, "y": 27, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "system_runtime_threadpool_thread_count", "legendFormat": "Threads", "refId": "A" },
+        { "expr": "system_runtime_threadpool_queue_length", "legendFormat": "Queue", "refId": "B" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Network I/O",
+      "gridPos": { "x": 12, "y": 27, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(system_net_sockets_bytes_received[5m])", "legendFormat": "RX", "refId": "A" },
+        { "expr": "rate(system_net_sockets_bytes_sent[5m])", "legendFormat": "TX", "refId": "B" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["mean", "max"] },
         "tooltip": { "mode": "multi", "sort": "none" }
       }
     }
@@ -151,7 +371,7 @@
   "timezone": "",
   "title": "Jellyfin",
   "uid": "jellyfin",
-  "version": 0,
+  "version": 1,
   "weekStart": "",
-  "description": "To enable Jellyfin metrics: Install the Prometheus plugin from the Jellyfin plugin catalog, then enable 'OpenMetrics' in the plugin settings."
+  "description": "Jellyfin server monitoring dashboard using ASP.NET Core metrics"
 }
