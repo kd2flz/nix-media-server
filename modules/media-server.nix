@@ -110,6 +110,15 @@ in
       openFirewall = true;
     };
 
+    environment.etc = lib.mkIf cfg.jellyfin.enable {
+      "jellyfin/system.xml".text = ''
+        <?xml version="1.0" encoding="utf-8"?>
+        <ServerConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+          <EnableMetrics>true</EnableMetrics>
+        </ServerConfiguration>
+      '';
+    };
+
     # Optional: provide the ffmpeg build Jellyfin expects
     environment.systemPackages = lib.mkIf cfg.jellyfin.enable (with pkgs; [
       jellyfin-ffmpeg
