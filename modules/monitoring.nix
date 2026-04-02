@@ -156,39 +156,6 @@ in
             foldersFromFilesStructure = true;
           };
         }];
-        datasources.settings.datasources = [
-          {
-            name = "Prometheus";
-            type = "prometheus";
-            url = "http://127.0.0.1:9001";
-            isDefault = true;
-          }
-          {
-            name = "Alertmanager";
-            type = "alertmanager";
-            url = "http://localhost:9093";
-            jsonData = {
-              implementation = "prometheus";
-            };
-          }
-        ];
-
-        alerting.contactPoints.settings = {
-          apiVersion = 1;
-          contactPoints = [
-            {
-              name = "default";
-              receivers = [
-                {
-                  type = "prometheus-alertmanager";
-                  settings.url = "http://localhost:${toString config.services.prometheus.alertmanager.port}";
-                }
-              ];
-            }
-          ];
-        };
-
-        alerting.rules.path = ./grafana-alert-rules.yaml;
       };
     };
 
