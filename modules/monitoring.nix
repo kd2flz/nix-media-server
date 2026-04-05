@@ -171,6 +171,11 @@ in
                 data = [{
                   refId = "A";
                   datasourceUid = "prometheus";
+                  queryType = "";
+                  relativeTimeRange = {
+                    from = 300;
+                    to = 0;
+                  };
                   model = {
                     expr = "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) > 90";
                     refId = "A";
@@ -192,6 +197,11 @@ in
                 data = [{
                   refId = "A";
                   datasourceUid = "prometheus";
+                  queryType = "";
+                  relativeTimeRange = {
+                    from = 300;
+                    to = 0;
+                  };
                   model = {
                     expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90";
                     refId = "A";
@@ -213,6 +223,11 @@ in
                 data = [{
                   refId = "A";
                   datasourceUid = "prometheus";
+                  queryType = "";
+                  relativeTimeRange = {
+                    from = 300;
+                    to = 0;
+                  };
                   model = {
                     expr = "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100 > 90";
                     refId = "A";
@@ -234,6 +249,11 @@ in
                 data = [{
                   refId = "A";
                   datasourceUid = "prometheus";
+                  queryType = "";
+                  relativeTimeRange = {
+                    from = 120;
+                    to = 0;
+                  };
                   model = {
                     expr = "up{job=\"jellyfin\"} == 0";
                     refId = "A";
