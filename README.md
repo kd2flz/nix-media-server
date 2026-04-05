@@ -356,7 +356,7 @@ Use a **`testing-<hostname>`** branch to try changes on your sandbox host before
 2.  Comin on `[hostname]` detects `testing-[hostname]` and runs:
         nixos-rebuild test
     (i.e., **`switch-to-configuration test`**). This **activates** the config without changing the bootloader.  
-    **Reference:** Comin “How to test a NixOS configuration change”. [\[mynixos.com\]](https://mynixos.com/options/services.caddy)
+    **Reference:** Comin "How to test a NixOS configuration change". [\[mynixos.com\]](https://mynixos.com/options/services.caddy)
 
 3.  Verify on the host:
     ```bash
@@ -370,3 +370,83 @@ Use a **`testing-<hostname>`** branch to try changes on your sandbox host before
     git rebase testing-T29769
     git push origin main
     ```
+
+***
+
+## Alerting (Grafana-managed)
+
+Alerts are managed through **Grafana's native alerting** (not Prometheus alerting). This allows you to manage alert rules and contact points directly in the Grafana UI.
+
+### Components
+
+- **Prometheus** (`port 9001`) - Scrapes metrics from all exporters
+- **Grafana** (`port 3000`) - Dashboards, alerting rules, contact points
+
+### Alert Rules
+
+Alert rules are defined declaratively in `modules/monitoring.nix` under `services.grafana.provision.alerting.rules.settings`. The module includes these built-in alerts:
+
+| Alert | Description | Severity |
+|-------|-------------|----------|
+| High CPU | CPU > 90% for 5m | warning |
+| High Memory | Memory > 90% for 5m | warning |
+| Disk Space Critical | Disk > 90% for 5m | critical |
+| Jellyfin Down | Service unavailable for 2m | critical |
+| Comin Down | Service unavailable for 2m | critical |
+| Audiobookshelf Down | Service unavailable for 2m | critical |
+
+### Configuration
+
+1. **Datasources** - Prometheus is provisioned automatically with UID `PBFA97CFB590B2093`
+2. **Contact Points** - Configure in Grafana UI: **Alerting → Contact points**
+3. **Notification Policies** - Configure in Grafana UI: **Alerting → Notification policies**
+
+### Adding Custom Alerts
+
+To add new alerts, edit `modules/monitoring.nix` following this format:
+
+```nix
+alerting.rules.settings = {
+  apiVersion = 1;
+  groups = [{
+    name = "your_group";
+    folder = "monitoring";
+    interval = "30s";
+    rules = [{
+      uid = "your-uid";
+      title = "Your Alert";
+      condition = "A";
+      data = [{
+        refId = "A";
+        relativeTimeRange = { from = 300; to = 0; };
+        datasourceUid = "PBFA97CFB590B2093";
+        model = {
+          datasource = { type = "prometheus"; uid = "PBFA97CFB590B2093"; };
+          expr = "your_promql_query > threshold";
+          intervalMs = 1000;
+          maxDataPoints = 43200;
+          refId = "A";
+        };
+      }];
+      noDataState = "NoData";
+      execErrState = "Alerting";
+      for = "5m";
+      annotations = {
+        summary = "Alert summary";
+        description = "Alert description";
+      };
+      labels = { severity = "warning"; };
+    }];
+  }];
+};
+```
+
+### Useful Commands
+
+```bash
+# View Prometheus metrics
+curl http://localhost:9001/metrics
+
+# View Grafana logs
+sudo journalctl -u grafana -n 50
+```
