@@ -136,7 +136,7 @@ in
           admin_password = "admin";
         };
       };
-      
+
       provision = {
         enable = true;
         dashboards.settings.providers = [{
@@ -241,7 +241,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "(1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 90";
+                    expr = "(1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 10";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
