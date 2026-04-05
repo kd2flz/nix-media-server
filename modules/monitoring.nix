@@ -179,7 +179,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "100 - (avg by () (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)";
+                    expr = "avg(100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)) > 90";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
@@ -210,7 +210,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100";
+                    expr = "avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100) > 90";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
@@ -241,7 +241,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "(1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100";
+                    expr = "max((1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100) > 90";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
@@ -272,7 +272,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "up{job=\"jellyfin\"}";
+                    expr = "last(up{job=\"jellyfin\"}) == 0";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
@@ -303,7 +303,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "up{job=\"comin\"}";
+                    expr = "last(up{job=\"comin\"}) == 0";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
@@ -334,7 +334,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "probe_success{job=\"audiobookshelf\"}";
+                    expr = "last(probe_success{job=\"audiobookshelf\"}) == 0";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
