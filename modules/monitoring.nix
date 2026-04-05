@@ -146,6 +146,7 @@ in
           admin_password = "admin";
         };
       };
+      
       provision = {
         enable = true;
         dashboards.settings.providers = [{
@@ -160,14 +161,14 @@ in
     };
 
     #############################################
-    # Provisioned Dashboards
+    # Grafana Dashboards (manual provisioning)
     #############################################
-    environment.etc = {
-      "grafana-dashboards/system-overview.json".source = ./dashboards/system-overview.json;
-      "grafana-dashboards/comin-deploys.json".source = ./dashboards/comin-deploys.json;
-      "grafana-dashboards/jellyfin.json".source = ./dashboards/jellyfin.json;
-      "grafana-dashboards/audiobookshelf.json".source = ./dashboards/audiobookshelf.json;
-    };
+   # environment.etc = {
+   #   "grafana-dashboards/system-overview.json".source = ./dashboards/system-overview.json;
+   #   "grafana-dashboards/comin-deploys.json".source = ./dashboards/comin-deploys.json;
+   #   "grafana-dashboards/jellyfin.json".source = ./dashboards/jellyfin.json;
+   #   "grafana-dashboards/audiobookshelf.json".source = ./dashboards/audiobookshelf.json;
+   # };
 
     #############################################
     # Comin exporter (Prometheus)
