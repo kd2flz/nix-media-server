@@ -157,6 +157,15 @@ in
             foldersFromFilesStructure = true;
           };
         }];
+        datasources.settings.datasources = [
+          {
+            name = "Prometheus";
+            type = "prometheus";
+            uid = "prometheus";
+            url = "http://127.0.0.1:9001";
+            isDefault = true;
+          }
+        ];
         alerting.rules.settings = {
           apiVersion = 1;
           groups = [{
@@ -170,14 +179,19 @@ in
                 condition = "A";
                 data = [{
                   refId = "A";
-                  datasourceUid = "prometheus";
-                  queryType = "";
                   relativeTimeRange = {
                     from = 300;
                     to = 0;
                   };
+                  datasourceUid = "prometheus";
                   model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "prometheus";
+                    };
                     expr = "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) > 90";
+                    intervalMs = 1000;
+                    maxDataPoints = 43200;
                     refId = "A";
                   };
                 }];
@@ -196,14 +210,19 @@ in
                 condition = "A";
                 data = [{
                   refId = "A";
-                  datasourceUid = "prometheus";
-                  queryType = "";
                   relativeTimeRange = {
                     from = 300;
                     to = 0;
                   };
+                  datasourceUid = "prometheus";
                   model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "prometheus";
+                    };
                     expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90";
+                    intervalMs = 1000;
+                    maxDataPoints = 43200;
                     refId = "A";
                   };
                 }];
@@ -222,14 +241,19 @@ in
                 condition = "A";
                 data = [{
                   refId = "A";
-                  datasourceUid = "prometheus";
-                  queryType = "";
                   relativeTimeRange = {
                     from = 300;
                     to = 0;
                   };
+                  datasourceUid = "prometheus";
                   model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "prometheus";
+                    };
                     expr = "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100 > 90";
+                    intervalMs = 1000;
+                    maxDataPoints = 43200;
                     refId = "A";
                   };
                 }];
@@ -248,14 +272,19 @@ in
                 condition = "A";
                 data = [{
                   refId = "A";
-                  datasourceUid = "prometheus";
-                  queryType = "";
                   relativeTimeRange = {
                     from = 120;
                     to = 0;
                   };
+                  datasourceUid = "prometheus";
                   model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "prometheus";
+                    };
                     expr = "up{job=\"jellyfin\"} == 0";
+                    intervalMs = 1000;
+                    maxDataPoints = 43200;
                     refId = "A";
                   };
                 }];
@@ -265,6 +294,68 @@ in
                 annotations = {
                   summary = "Jellyfin is down";
                   description = "Jellyfin has been unavailable for 2 minutes";
+                };
+                labels = { severity = "critical"; };
+              }
+              {
+                uid = "comin-down";
+                title = "Comin Down";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  relativeTimeRange = {
+                    from = 120;
+                    to = 0;
+                  };
+                  datasourceUid = "prometheus";
+                  model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "prometheus";
+                    };
+                    expr = "up{job=\"comin\"} == 0";
+                    intervalMs = 1000;
+                    maxDataPoints = 43200;
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "2m";
+                annotations = {
+                  summary = "Comin is down";
+                  description = "Comin has been unavailable for 2 minutes";
+                };
+                labels = { severity = "critical"; };
+              }
+              {
+                uid = "audiobookshelf-down";
+                title = "Audiobookshelf Down";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  relativeTimeRange = {
+                    from = 120;
+                    to = 0;
+                  };
+                  datasourceUid = "prometheus";
+                  model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "prometheus";
+                    };
+                    expr = "probe_success{job=\"audiobookshelf\"} == 0";
+                    intervalMs = 1000;
+                    maxDataPoints = 43200;
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "2m";
+                annotations = {
+                  summary = "Audiobookshelf is down";
+                  description = "Audiobookshelf has been unavailable for 2 minutes";
                 };
                 labels = { severity = "critical"; };
               }
