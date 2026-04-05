@@ -157,6 +157,100 @@ in
             foldersFromFilesStructure = true;
           };
         }];
+        alerting.rules.settings = {
+          apiVersion = 1;
+          groups = [{
+            name = "system_alerts";
+            folder = "monitoring";
+            interval = "30s";
+            rules = [
+              {
+                uid = "high-cpu";
+                title = "High CPU";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  datasourceUid = "prometheus";
+                  model = {
+                    expr = "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) > 90";
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "5m";
+                annotations = {
+                  summary = "High CPU usage";
+                  description = "CPU usage is above 90%";
+                };
+                labels = { severity = "warning"; };
+              }
+              {
+                uid = "high-memory";
+                title = "High Memory";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  datasourceUid = "prometheus";
+                  model = {
+                    expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90";
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "5m";
+                annotations = {
+                  summary = "High memory usage";
+                  description = "Memory usage is above 90%";
+                };
+                labels = { severity = "warning"; };
+              }
+              {
+                uid = "disk-space";
+                title = "Disk Space Critical";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  datasourceUid = "prometheus";
+                  model = {
+                    expr = "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100 > 90";
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "5m";
+                annotations = {
+                  summary = "Disk space critical";
+                  description = "Disk usage is above 90%";
+                };
+                labels = { severity = "critical"; };
+              }
+              {
+                uid = "jellyfin-down";
+                title = "Jellyfin Down";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  datasourceUid = "prometheus";
+                  model = {
+                    expr = "up{job=\"jellyfin\"} == 0";
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "2m";
+                annotations = {
+                  summary = "Jellyfin is down";
+                  description = "Jellyfin has been unavailable for 2 minutes";
+                };
+                labels = { severity = "critical"; };
+              }
+            ];
+          }];
+        };
       };
     };
 
