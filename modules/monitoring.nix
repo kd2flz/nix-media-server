@@ -210,7 +210,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90";
+                    expr = "(1 - (node_memory_MemAvailable_bytes{instance=\"localhost\"} / node_memory_MemTotal_bytes{instance=\"localhost\"})) * 100 > 90";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
@@ -241,7 +241,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "(1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 10";
+                    expr = "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100 > 10";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
