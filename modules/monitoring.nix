@@ -47,7 +47,7 @@ in
 
 
     #############################################
-    # Prometheus (scrape targets + alerts)
+    # Prometheus (scrape targets)
     #############################################
     services.prometheus = {
       enable = true;
@@ -57,16 +57,6 @@ in
         evaluation_interval = "30s";
         scrape_interval = "30s";
       };
-      alertmanagers = [
-        {
-          static_configs = [
-            { targets = [ "localhost:${toString config.services.prometheus.alertmanager.port}" ]; }
-          ];
-        }
-      ];
-      ruleFiles = [
-        ./alert-rules.yaml
-      ];
       scrapeConfigs = [
         {
           job_name = "node";
