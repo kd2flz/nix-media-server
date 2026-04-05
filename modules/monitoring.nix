@@ -345,6 +345,8 @@ in
                       uid = "PBFA97CFB590B2093";
                     };
                     expr = "probe_success{job=\"audiobookshelf\"} == 0";
+                    instant = true;
+                    range = false;
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
