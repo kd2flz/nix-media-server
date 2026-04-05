@@ -157,15 +157,6 @@ in
             foldersFromFilesStructure = true;
           };
         }];
-        datasources.settings.datasources = [
-          {
-            name = "Prometheus";
-            type = "prometheus";
-            uid = "prometheus";
-            url = "http://127.0.0.1:9001";
-            isDefault = true;
-          }
-        ];
         alerting.rules.settings = {
           apiVersion = 1;
           groups = [{
