@@ -157,6 +157,15 @@ in
             foldersFromFilesStructure = true;
           };
         }];
+        datasources.settings.datasources = [
+          {
+            name = "Prometheus";
+            type = "prometheus";
+            uid = "PBFA97CFB590B2093";
+            url = "http://127.0.0.1:9001";
+            isDefault = true;
+          }
+        ];
         alerting.rules.settings = {
           apiVersion = 1;
           groups = [{
@@ -174,11 +183,11 @@ in
                     from = 300;
                     to = 0;
                   };
-                  datasourceUid = "prometheus";
+                  datasourceUid = "PBFA97CFB590B2093";
                   model = {
                     datasource = {
                       type = "prometheus";
-                      uid = "prometheus";
+                      uid = "PBFA97CFB590B2093";
                     };
                     expr = "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) > 90";
                     intervalMs = 1000;
@@ -205,11 +214,11 @@ in
                     from = 300;
                     to = 0;
                   };
-                  datasourceUid = "prometheus";
+                  datasourceUid = "PBFA97CFB590B2093";
                   model = {
                     datasource = {
                       type = "prometheus";
-                      uid = "prometheus";
+                      uid = "PBFA97CFB590B2093";
                     };
                     expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90";
                     intervalMs = 1000;
@@ -236,11 +245,11 @@ in
                     from = 300;
                     to = 0;
                   };
-                  datasourceUid = "prometheus";
+                  datasourceUid = "PBFA97CFB590B2093";
                   model = {
                     datasource = {
                       type = "prometheus";
-                      uid = "prometheus";
+                      uid = "PBFA97CFB590B2093";
                     };
                     expr = "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100 > 90";
                     intervalMs = 1000;
@@ -267,11 +276,11 @@ in
                     from = 120;
                     to = 0;
                   };
-                  datasourceUid = "prometheus";
+                  datasourceUid = "PBFA97CFB590B2093";
                   model = {
                     datasource = {
                       type = "prometheus";
-                      uid = "prometheus";
+                      uid = "PBFA97CFB590B2093";
                     };
                     expr = "up{job=\"jellyfin\"} == 0";
                     intervalMs = 1000;
@@ -298,11 +307,11 @@ in
                     from = 120;
                     to = 0;
                   };
-                  datasourceUid = "prometheus";
+                  datasourceUid = "PBFA97CFB590B2093";
                   model = {
                     datasource = {
                       type = "prometheus";
-                      uid = "prometheus";
+                      uid = "PBFA97CFB590B2093";
                     };
                     expr = "up{job=\"comin\"} == 0";
                     intervalMs = 1000;
@@ -329,11 +338,11 @@ in
                     from = 120;
                     to = 0;
                   };
-                  datasourceUid = "prometheus";
+                  datasourceUid = "PBFA97CFB590B2093";
                   model = {
                     datasource = {
                       type = "prometheus";
-                      uid = "prometheus";
+                      uid = "PBFA97CFB590B2093";
                     };
                     expr = "probe_success{job=\"audiobookshelf\"} == 0";
                     intervalMs = 1000;
