@@ -241,7 +241,9 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "max((1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100) > 90";
+                    expr = "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100";
+                    instant = true;
+                    range = false;
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
