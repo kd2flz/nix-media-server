@@ -393,8 +393,11 @@ in
                       uid = "PBFA97CFB590B2093";
                     };
                     expr = "up{job=\"jellyfin\"} == 0";
-                    intervalMs = 1000;
+                    instant = true;
+                    interval = null;
+                    intervalMs = 15000;
                     maxDataPoints = 43200;
+                    range = false;
                     refId = "A";
                   };
                 }];
@@ -424,8 +427,11 @@ in
                       uid = "PBFA97CFB590B2093";
                     };
                     expr = "up{job=\"comin\"} == 0";
-                    intervalMs = 1000;
+                    instant = true;
+                    interval = null;
+                    intervalMs = 15000;
                     maxDataPoints = 43200;
+                    range = false;
                     refId = "A";
                   };
                 }];
@@ -455,8 +461,11 @@ in
                       uid = "PBFA97CFB590B2093";
                     };
                     expr = "probe_success{job=\"audiobookshelf\"} == 0";
-                    intervalMs = 1000;
+                    instant = true;
+                    interval = null;
+                    intervalMs = 15000;
                     maxDataPoints = 43200;
+                    range = false;
                     refId = "A";
                   };
                 }];
