@@ -166,25 +166,61 @@ in
               {
                 uid = "high-cpu";
                 title = "High CPU";
-                condition = "A";
-                data = [{
-                  refId = "A";
-                  relativeTimeRange = {
-                    from = 300;
-                    to = 0;
-                  };
-                  datasourceUid = "PBFA97CFB590B2093";
-                  model = {
-                    datasource = {
-                      type = "prometheus";
-                      uid = "PBFA97CFB590B2093";
-                    };
-                    expr = "avg(100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)) > 90";
-                    intervalMs = 1000;
-                    maxDataPoints = 43200;
+                condition = "C";
+                data = [
+                  {
                     refId = "A";
-                  };
-                }];
+                    relativeTimeRange = {
+                      from = 300;
+                      to = 0;
+                    };
+                    datasourceUid = "PBFA97CFB590B2093";
+                    model = {
+                      datasource = {
+                        type = "prometheus";
+                        uid = "PBFA97CFB590B2093";
+                      };
+                      expr = "avg(100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))";
+                      intervalMs = 1000;
+                      maxDataPoints = 43200;
+                      refId = "A";
+                    };
+                  }
+                  {
+                    refId = "C";
+                    datasourceUid = "__expr__";
+                    model = {
+                      conditions = [
+                        {
+                          evaluator = {
+                            params = [90];
+                            type = "gt";
+                          };
+                          operator = {
+                            type = "and";
+                          };
+                          query = {
+                            params = ["C"];
+                          };
+                          reducer = {
+                            params = [];
+                            type = "last";
+                          };
+                          type = "query";
+                        }
+                      ];
+                      datasource = {
+                        type = "__expr__";
+                        uid = "__expr__";
+                      };
+                      expression = "A";
+                      intervalMs = 1000;
+                      maxDataPoints = 43200;
+                      refId = "C";
+                      type = "threshold";
+                    };
+                  }
+                ];
                 noDataState = "NoData";
                 execErrState = "Alerting";
                 for = "5m";
@@ -197,25 +233,61 @@ in
               {
                 uid = "high-memory";
                 title = "High Memory";
-                condition = "A";
-                data = [{
-                  refId = "A";
-                  relativeTimeRange = {
-                    from = 300;
-                    to = 0;
-                  };
-                  datasourceUid = "PBFA97CFB590B2093";
-                  model = {
-                    datasource = {
-                      type = "prometheus";
-                      uid = "PBFA97CFB590B2093";
-                    };
-                    expr = "avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100) > 90";
-                    intervalMs = 1000;
-                    maxDataPoints = 43200;
+                condition = "C";
+                data = [
+                  {
                     refId = "A";
-                  };
-                }];
+                    relativeTimeRange = {
+                      from = 300;
+                      to = 0;
+                    };
+                    datasourceUid = "PBFA97CFB590B2093";
+                    model = {
+                      datasource = {
+                        type = "prometheus";
+                        uid = "PBFA97CFB590B2093";
+                      };
+                      expr = "avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)";
+                      intervalMs = 1000;
+                      maxDataPoints = 43200;
+                      refId = "A";
+                    };
+                  }
+                  {
+                    refId = "C";
+                    datasourceUid = "__expr__";
+                    model = {
+                      conditions = [
+                        {
+                          evaluator = {
+                            params = [90];
+                            type = "gt";
+                          };
+                          operator = {
+                            type = "and";
+                          };
+                          query = {
+                            params = ["C"];
+                          };
+                          reducer = {
+                            params = [];
+                            type = "last";
+                          };
+                          type = "query";
+                        }
+                      ];
+                      datasource = {
+                        type = "__expr__";
+                        uid = "__expr__";
+                      };
+                      expression = "A";
+                      intervalMs = 1000;
+                      maxDataPoints = 43200;
+                      refId = "C";
+                      type = "threshold";
+                    };
+                  }
+                ];
                 noDataState = "NoData";
                 execErrState = "Alerting";
                 for = "5m";
