@@ -392,7 +392,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "last(up{job=\"jellyfin\"}) == 0";
+                    expr = "up{job=\"jellyfin\"} == 0";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
@@ -423,7 +423,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "last(up{job=\"comin\"}) == 0";
+                    expr = "up{job=\"comin\"} == 0";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
@@ -454,7 +454,7 @@ in
                       type = "prometheus";
                       uid = "PBFA97CFB590B2093";
                     };
-                    expr = "last(probe_success{job=\"audiobookshelf\"}) == 0";
+                    expr = "probe_success{job=\"audiobookshelf\"} == 0";
                     intervalMs = 1000;
                     maxDataPoints = 43200;
                     refId = "A";
