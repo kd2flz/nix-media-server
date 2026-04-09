@@ -187,6 +187,22 @@ in
                     };
                   }
                   {
+                    refId = "B";
+                    datasourceUid = "__expr__";
+                    model = {
+                      datasource = {
+                        type = "__expr__";
+                        uid = "__expr__";
+                      };
+                      expression = "A";
+                      reducer = {
+                        params = [];
+                        type = "avg";
+                      };
+                      type = "reduce";
+                    };
+                  }
+                  {
                     refId = "C";
                     datasourceUid = "__expr__";
                     model = {
@@ -200,7 +216,7 @@ in
                             type = "and";
                           };
                           query = {
-                            params = ["C"];
+                            params = ["B"];
                           };
                           reducer = {
                             params = [];
@@ -213,7 +229,7 @@ in
                         type = "__expr__";
                         uid = "__expr__";
                       };
-                      expression = "A";
+                      expression = "B";
                       intervalMs = 1000;
                       maxDataPoints = 43200;
                       refId = "C";
@@ -254,6 +270,22 @@ in
                     };
                   }
                   {
+                    refId = "B";
+                    datasourceUid = "__expr__";
+                    model = {
+                      datasource = {
+                        type = "__expr__";
+                        uid = "__expr__";
+                      };
+                      expression = "A";
+                      reducer = {
+                        params = [];
+                        type = "avg";
+                      };
+                      type = "reduce";
+                    };
+                  }
+                  {
                     refId = "C";
                     datasourceUid = "__expr__";
                     model = {
@@ -267,7 +299,7 @@ in
                             type = "and";
                           };
                           query = {
-                            params = ["C"];
+                            params = ["B"];
                           };
                           reducer = {
                             params = [];
@@ -280,7 +312,7 @@ in
                         type = "__expr__";
                         uid = "__expr__";
                       };
-                      expression = "A";
+                      expression = "B";
                       intervalMs = 1000;
                       maxDataPoints = 43200;
                       refId = "C";
