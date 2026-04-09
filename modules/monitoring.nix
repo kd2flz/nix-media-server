@@ -181,25 +181,12 @@ in
                         uid = "PBFA97CFB590B2093";
                       };
                       expr = "avg(100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))";
-                      intervalMs = 1000;
+                      instant = true;
+                      interval = null;
+                      intervalMs = 15000;
                       maxDataPoints = 43200;
+                      range = false;
                       refId = "A";
-                    };
-                  }
-                  {
-                    refId = "B";
-                    datasourceUid = "__expr__";
-                    model = {
-                      datasource = {
-                        type = "__expr__";
-                        uid = "__expr__";
-                      };
-                      expression = "A";
-                      reducer = {
-                        params = [];
-                        type = "avg";
-                      };
-                      type = "reduce";
                     };
                   }
                   {
@@ -216,7 +203,7 @@ in
                             type = "and";
                           };
                           query = {
-                            params = ["B"];
+                            params = ["C"];
                           };
                           reducer = {
                             params = [];
@@ -229,7 +216,7 @@ in
                         type = "__expr__";
                         uid = "__expr__";
                       };
-                      expression = "B";
+                      expression = "A";
                       intervalMs = 1000;
                       maxDataPoints = 43200;
                       refId = "C";
@@ -264,25 +251,12 @@ in
                         uid = "PBFA97CFB590B2093";
                       };
                       expr = "avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)";
-                      intervalMs = 1000;
+                      instant = true;
+                      interval = null;
+                      intervalMs = 15000;
                       maxDataPoints = 43200;
+                      range = false;
                       refId = "A";
-                    };
-                  }
-                  {
-                    refId = "B";
-                    datasourceUid = "__expr__";
-                    model = {
-                      datasource = {
-                        type = "__expr__";
-                        uid = "__expr__";
-                      };
-                      expression = "A";
-                      reducer = {
-                        params = [];
-                        type = "avg";
-                      };
-                      type = "reduce";
                     };
                   }
                   {
@@ -299,7 +273,7 @@ in
                             type = "and";
                           };
                           query = {
-                            params = ["B"];
+                            params = ["C"];
                           };
                           reducer = {
                             params = [];
@@ -312,7 +286,7 @@ in
                         type = "__expr__";
                         uid = "__expr__";
                       };
-                      expression = "B";
+                      expression = "A";
                       intervalMs = 1000;
                       maxDataPoints = 43200;
                       refId = "C";
