@@ -226,90 +226,77 @@ in
                 labels = { severity = "warning"; };
               }
               {
-                uid = "disk-space"
-                title = "Disk Space Critical"
-                condition = "C"
-              
+                uid = "disk-space";
+                title = "Disk Space Critical";
+                condition = "C";
                 data = [
-                  # ---- Query A: disk usage % ----
                   {
-                    refId = "A"
+                    refId = "A";
                     relativeTimeRange = {
-                      from = 300
-                      to   = 0
-                    }
-                    datasourceUid = "PBFA97CFB590B2093"
+                      from = 21600;
+                      to = 0;
+                    };
+                    datasourceUid = "PBFA97CFB590B2093";
                     model = {
                       datasource = {
-                        type = "prometheus"
-                        uid  = "PBFA97CFB590B2093"
-                      }
-                      expr          = "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100"
-                      instant       = true
-                      range         = false
-                      interval      = ""
-                      intervalMs    = 15000
-                      maxDataPoints = 43200
-                      refId         = "A"
-                    }
-                  },
-              
-                  # ---- Expression C: threshold A > 90 ----
+                        type = "prometheus";
+                        uid = "PBFA97CFB590B2093";
+                      };
+                      expr = "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100";
+                      instant = true;
+                      interval = null;
+                      intervalMs = 15000;
+                      maxDataPoints = 43200;
+                      range = false;
+                      refId = "A";
+                    };
+                  }
                   {
-                    refId = "C"
-                    relativeTimeRange = {
-                      from = 0
-                      to   = 0
-                    }
-                    datasourceUid = "__expr__"
+                    refId = "C";
+                    datasourceUid = "__expr__";
                     model = {
-                      datasource = {
-                        type = "__expr__"
-                        uid  = "__expr__"
-                      }
-              
-                      type       = "threshold"
-                      expression = "A"
-              
                       conditions = [
                         {
-                          type = "query"
-                          query = {
-                            params = ["C"]
-                          }
-                          reducer = {
-                            type = "last"
-                          }
                           evaluator = {
-                            type   = "gt"
-                            params = [90]
-                          }
+                            params = [90];
+                            type = "gt";
+                          };
                           operator = {
-                            type = "and"
-                          }
+                            type = "and";
+                          };
+                          query = {
+                            params = ["C"];
+                          };
+                          reducer = {
+                            params = [];
+                            type = "last";
+                          };
+                          type = "query";
                         }
-                      ]
-                    }
+                      ];
+                      datasource = {
+                        type = "__expr__";
+                        uid = "__expr__";
+                      };
+                      expression = "A";
+                      intervalMs = 1000;
+                      maxDataPoints = 43200;
+                      refId = "C";
+                      type = "threshold";
+                    };
                   }
-                ]
-              
-                dashboardUid = "system-overview"
-                panelId      = 3
-              
-                noDataState  = "NoData"
-                execErrState = "Alerting"
-                for          = "5m"
-              
+                ];
+                dashboardUid = "system-overview";
+                panelId = 3;
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "5m";
+                keepFiringFor = "1m";
                 annotations = {
-                  summary       = "Disk space critical"
-                  description   = "Disk usage is above 90%"
-                  __dashboardUID__ = "system-overview"
-                  __panelId__      = 3
-                }
-              
-                labels = {
-                  severity = "critical"
-                }
+                  summary = "Disk space critical";
+                  description = "Disk usage is above 90%";
+                };
+                labels = {};
               }
               {
                 uid = "jellyfin-down";
