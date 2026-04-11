@@ -255,7 +255,7 @@ in
     ########################################
 
 
-    services.caddy = {
+services.caddy = {
       enable = true;
       resume = false;
 
@@ -274,6 +274,11 @@ in
         books.${cfg.domainBase} {
           tls internal
           reverse_proxy 127.0.0.1:13378
+        }''}
+        ${lib.optionalString config.services.monitoring.enable ''
+        grafana.${cfg.domainBase} {
+          tls internal
+          reverse_proxy 127.0.0.1:3000
         }''}
       '';
     };
