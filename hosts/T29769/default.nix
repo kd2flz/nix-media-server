@@ -38,7 +38,7 @@
     };
 
     audiobookshelf.enable = true;
-    jellyfin.enable = false;
+    jellyfin.enable = true;
     wizarr.enable = true;
     nanitor.enable = true;
   };
