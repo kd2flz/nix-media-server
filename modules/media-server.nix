@@ -110,6 +110,10 @@ in
       openFirewall = true;
     };
 
+    systemd.services.jellyfin.serviceConfig.PreStart = lib.mkIf cfg.jellyfin.enable (lib.mkAfter ''
+      ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
+    '');
+
     # Optional: provide the ffmpeg build Jellyfin expects
     environment.systemPackages = lib.mkIf cfg.jellyfin.enable (with pkgs; [
       jellyfin-ffmpeg
@@ -251,7 +255,7 @@ in
     ########################################
 
 
-    services.caddy = {
+services.caddy = {
       enable = true;
       resume = false;
 
@@ -271,6 +275,11 @@ in
           tls internal
           reverse_proxy 127.0.0.1:13378
         }''}
+        ${lib.optionalString config.services.monitoring.enable ''
+        grafana.${cfg.domainBase} {
+          tls internal
+          reverse_proxy 127.0.0.1:3000
+        }''}
       '';
     };
 
@@ -282,7 +291,7 @@ in
     ########################################
     networking.firewall = {
       enable = true;
-      allowedTCPPorts = [ 80 443 5690 ];
+      allowedTCPPorts = [ 80 443 5690 3000 9001 ];
     };
 
     ########################################

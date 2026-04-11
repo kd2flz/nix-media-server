@@ -122,6 +122,22 @@ Edit `modules/media-server.nix`:
 3. Push to `main` branch → Comin auto-deploys to production hosts
 4. Always test locally first: `nixos-rebuild switch --flake .#<hostname>`
 
+## Issue Handling
+
+### Referencing Issues in Commits
+- Use `Refs #<issue>` to reference an issue without closing it (e.g., `Refs #41`)
+- Use `Closes #<issue>` only when explicitly instructed by the human to close an issue
+- Never close issues proactively - wait for human approval
+
+### Linking Issues in Comments
+- When referencing issues in commit messages or comments, use just the reference (e.g., `Refs #41`)
+- Do not add extra explanation text in the reference comment
+
+### Before Fixing Issues
+- Check if an issue already exists before creating a new one
+- Search existing issues to avoid duplicates
+- When fixing a bug, first verify the issue exists and understand its root cause
+
 ## Key Services
 
 - **Jellyfin** - Media server (video/music), port 8096
