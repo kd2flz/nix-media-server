@@ -245,10 +245,10 @@ in
         group = "root";
       };
 
-      systemd.services.nanitor-agent.serviceConfig.EnvironmentFile = lib.mkIf cfg.nanitor.enable [
-        config.sops.secrets.nanitor_enroll_token.path
-        config.sops.secrets.nanitor_endpoint.path
-      ];
+      systemd.services.nanitor-agent.preStart = lib.mkIf cfg.nanitor.enable ''
+        export NANITOR_ENROLL_TOKEN="$(cat ${config.sops.secrets.nanitor_enroll_token.path})"
+        export NANITOR_ENDPOINT="$(cat ${config.sops.secrets.nanitor_endpoint.path})"
+      '';
 
 
     ########################################
