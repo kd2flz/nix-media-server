@@ -229,12 +229,8 @@ in
 
       services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
         enable = true;
+        package = pkgs.nanitor-agent;
         logLevel = cfg.nanitor.logLevel;
-        enroll.enable = true;
-        environment = {
-          NANITOR_ENROLL_TOKEN = config.sops.secrets.nanitor_enroll_token.path;
-          NANITOR_ENDPOINT = config.sops.secrets.nanitor_endpoint.path;
-        };
       };
 
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
@@ -248,6 +244,11 @@ in
         owner = "root";
         group = "root";
       };
+
+      systemd.services.nanitor-agent.serviceConfig.EnvironmentFile = lib.mkIf cfg.nanitor.enable [
+        config.sops.secrets.nanitor_enroll_token.path
+        config.sops.secrets.nanitor_endpoint.path
+      ];
 
 
     ########################################
