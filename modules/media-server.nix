@@ -231,7 +231,6 @@ in
         enable = true;
         package = pkgs.nanitor-agent;
         logLevel = cfg.nanitor.logLevel;
-        enroll.enable = false;  # disable module's enroll, we handle it in preStart
       };
 
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
@@ -240,24 +239,16 @@ in
         group = "root";
       };
 
-      sops.secrets.nanitor_endpoint = lib.mkIf cfg.nanitor.enable {
-        mode = "0440";
-        owner = "root";
-        group = "root";
-      };
-
       systemd.services.nanitor-agent.preStart = lib.mkIf cfg.nanitor.enable ''
-        NANITOR_ENROLL_TOKEN="$(cat ${config.sops.secrets.nanitor_enroll_token.path})"
-        NANITOR_ENDPOINT="$(cat ${config.sops.secrets.nanitor_endpoint.path})"
-        export NANITOR_ENROLL_TOKEN NANITOR_ENDPOINT
-
-        bin="${pkgs.nanitor-agent}/bin/nanitor-agent"
-        AGENT_UUID=$($bin info 2>/dev/null | grep "^UUID:" | sed 's/^UUID: *//')
-        if ! $bin is-signedup >/dev/null 2>&1 || [ -z "$AGENT_UUID" ]; then
-          echo "[nanitor-agent] Not enrolled yet; attempting signup"
-          $bin signup --key "$NANITOR_ENROLL_TOKEN" || echo "[nanitor-agent] signup failed"
-        else
-          echo "[nanitor-agent] Already enrolled (UUID: $AGENT_UUID)"
+        KEY_FILE=${config.sops.secrets.nanitor_enroll_token.path}
+        if [ -f "$KEY_FILE" ]; then
+          KEY_CONTENT=$(cat "$KEY_FILE")
+          # Extract base64 from PEM format
+          if echo "$KEY_CONTENT" | grep -q "BEGIN"; then
+            export NANITOR_ENROLL_TOKEN=$(echo "$KEY_CONTENT" | sed -n '/-----BEGIN/,/-----END/p' | grep -v '^-----' | tr -d '\n ')
+          else
+            export NANITOR_ENROLL_TOKEN=$(cat "$KEY_FILE")
+          fi
         fi
       '';
 
