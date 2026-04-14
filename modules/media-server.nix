@@ -231,6 +231,7 @@ in
         enable = true;
         package = pkgs.nanitor-agent;
         logLevel = cfg.nanitor.logLevel;
+        enroll.enable = false;  # disable module's enroll, we handle it in preStart
       };
 
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
@@ -246,8 +247,18 @@ in
       };
 
       systemd.services.nanitor-agent.preStart = lib.mkIf cfg.nanitor.enable ''
-        export NANITOR_ENROLL_TOKEN="$(cat ${config.sops.secrets.nanitor_enroll_token.path})"
-        export NANITOR_ENDPOINT="$(cat ${config.sops.secrets.nanitor_endpoint.path})"
+        NANITOR_ENROLL_TOKEN="$(cat ${config.sops.secrets.nanitor_enroll_token.path})"
+        NANITOR_ENDPOINT="$(cat ${config.sops.secrets.nanitor_endpoint.path})"
+        export NANITOR_ENROLL_TOKEN NANITOR_ENDPOINT
+
+        bin="${pkgs.nanitor-agent}/bin/nanitor-agent"
+        AGENT_UUID=$($bin info 2>/dev/null | grep "^UUID:" | sed 's/^UUID: *//')
+        if ! $bin is-signedup >/dev/null 2>&1 || [ -z "$AGENT_UUID" ]; then
+          echo "[nanitor-agent] Not enrolled yet; attempting signup"
+          $bin signup --key "$NANITOR_ENROLL_TOKEN" || echo "[nanitor-agent] signup failed"
+        else
+          echo "[nanitor-agent] Already enrolled (UUID: $AGENT_UUID)"
+        fi
       '';
 
 
