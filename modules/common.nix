@@ -1,20 +1,25 @@
 
 { config, lib, pkgs, ... }:
 {
-  
+
   # Enable SSH
-  services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+    settings = {
+     MaxAuthTries = 10;
+    };
+  };
 
   # Automatic Updating
  system.autoUpgrade.enable = true;
  system.autoUpgrade.dates = "weekly";
- 
+
  # Automatic Cleanup
  nix.gc.automatic = true;
  nix.gc.dates = "daily";
  nix.gc.options = "--delete-older-than 10d";
  nix.settings.auto-optimise-store = true;
- 
+
  # Define admin user
   users.users.admin = {
     isNormalUser = true;
@@ -26,7 +31,7 @@
   };
   # LAN networking
   networking.networkmanager.enable = true;
-  
+
   # Enable Podman
   virtualisation.containers.enable = true;
   virtualisation.podman.enable = true;
