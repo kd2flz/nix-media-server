@@ -231,20 +231,22 @@ in
         enable = true;
         package = pkgs.nanitor-agent;
         logLevel = cfg.nanitor.logLevel;
+        environment = {
+          NANITOR_ENROLL_TOKEN = config.sops.secrets.nanitor_enroll_token.path;
+          NANITOR_ENDPOINT = config.sops.secrets.nanitor_endpoint.path;
+        };
       };
 
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
         mode = "0440";
         owner = "root";
         group = "root";
-        environmentVariable = "NANITOR_ENROLL_TOKEN";
       };
 
       sops.secrets.nanitor_endpoint = lib.mkIf cfg.nanitor.enable {
         mode = "0440";
         owner = "root";
         group = "root";
-        environmentVariable = "NANITOR_ENDPOINT";
       };
 
 
