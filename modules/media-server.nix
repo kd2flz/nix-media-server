@@ -237,20 +237,15 @@ in
         mode = "0440";
         owner = "root";
         group = "root";
+        environmentVariable = "NANITOR_ENROLL_TOKEN";
       };
 
-      systemd.services.nanitor-agent.preStart = lib.mkIf cfg.nanitor.enable ''
-        KEY_FILE=${config.sops.secrets.nanitor_enroll_token.path}
-        if [ -f "$KEY_FILE" ]; then
-          KEY_CONTENT=$(cat "$KEY_FILE")
-          # Extract base64 from PEM format
-          if echo "$KEY_CONTENT" | grep -q "BEGIN"; then
-            export NANITOR_ENROLL_TOKEN=$(echo "$KEY_CONTENT" | sed -n '/-----BEGIN/,/-----END/p' | grep -v '^-----' | tr -d '\n ')
-          else
-            export NANITOR_ENROLL_TOKEN=$(cat "$KEY_FILE")
-          fi
-        fi
-      '';
+      sops.secrets.nanitor_endpoint = lib.mkIf cfg.nanitor.enable {
+        mode = "0440";
+        owner = "root";
+        group = "root";
+        environmentVariable = "NANITOR_ENDPOINT";
+      };
 
 
     ########################################
