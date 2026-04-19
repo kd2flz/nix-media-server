@@ -231,10 +231,6 @@ in
         enable = true;
         package = pkgs.nanitor-agent;
         logLevel = cfg.nanitor.logLevel;
-        environment = {
-          NANITOR_ENROLL_TOKEN = config.sops.secrets.nanitor_enroll_token.path;
-          NANITOR_ENDPOINT = config.sops.secrets.nanitor_endpoint.path;
-        };
       };
 
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
@@ -247,6 +243,22 @@ in
         mode = "0440";
         owner = "root";
         group = "root";
+      };
+
+      systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+        preStart = lib.mkAfter ''
+          if [ -f "${config.sops.secrets.nanitor_enroll_token.path}" ]; then
+            KEY_CONTENT=$(cat "${config.sops.secrets.nanitor_enroll_token.path}")
+            if echo "$KEY_CONTENT" | grep -q "BEGIN"; then
+              export NANITOR_ENROLL_TOKEN=$(echo "$KEY_CONTENT" | sed -n '/-----BEGIN/,/-----END/p' | grep -v '^-----' | tr -d '\n ')
+            else
+              export NANITOR_ENROLL_TOKEN=$(cat "${config.sops.secrets.nanitor_enroll_token.path}")
+            fi
+          fi
+          if [ -f "${config.sops.secrets.nanitor_endpoint.path}" ]; then
+            export NANITOR_ENDPOINT=$(cat "${config.sops.secrets.nanitor_endpoint.path}")
+          fi
+        '';
       };
 
 
