@@ -231,6 +231,8 @@ in
         enable = true;
         package = pkgs.nanitor-agent;
         logLevel = cfg.nanitor.logLevel;
+        enroll.key = config.sops.secrets.nanitor_enroll_token.path;
+        enroll.serverUrl = config.sops.secrets.nanitor_endpoint.path;
       };
 
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
@@ -245,37 +247,7 @@ in
         group = "root";
       };
 
-      systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
-        serviceConfig = {
-          ExecStartPre = [
-            "${lib.getExe pkgs.writeScriptBin "nanitor-setup-env" ''
-              #!${pkgs.bash}/bin/bash
-              set -e
-              mkdir -p /run/nanitor-agent
-
-              ENROLL_TOKEN_FILE=${config.sops.secrets.nanitor_enroll_token.path}
-              ENDPOINT_FILE=${config.sops.secrets.nanitor_endpoint.path}
-
-              if [ -f "$ENROLL_TOKEN_FILE" ]; then
-                KEY_CONTENT=$(cat "$ENROLL_TOKEN_FILE")
-                if echo "$KEY_CONTENT" | grep -q "BEGIN"; then
-                  NANITOR_ENROLL_TOKEN=$(echo "$KEY_CONTENT" | sed -n '/-----BEGIN/,/-----END/p' | grep -v '^-----' | tr -d '\n ')
-                else
-                  NANITOR_ENROLL_TOKEN=$(cat "$ENROLL_TOKEN_FILE")
-                fi
-              fi
-
-              if [ -f "$ENDPOINT_FILE" ]; then
-                NANITOR_ENDPOINT=$(cat "$ENDPOINT_FILE")
-              fi
-
-              echo "NANITOR_ENROLL_TOKEN=$NANITOR_ENROLL_TOKEN" > /run/nanitor-agent/env
-              echo "NANITOR_ENDPOINT=$NANITOR_ENDPOINT" >> /run/nanitor-agent/env
-            ''}"
-          ];
-          EnvironmentFile = "/run/nanitor-agent/env";
-        };
-      };
+      
 
 
     ########################################
