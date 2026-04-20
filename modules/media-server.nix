@@ -248,7 +248,30 @@ in
       systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
         serviceConfig = {
           ExecStartPre = [
-            "${pkgs.bash}/bin/bash -c 'export PATH=${pkgs.coreutils}/bin:${pkgs.gnused}/bin; mkdir -p /run/nanitor-agent; if [ -f ${config.sops.secrets.nanitor_enroll_token.path} ]; then KEY_CONTENT=$(cat ${config.sops.secrets.nanitor_enroll_token.path}); if echo \"$KEY_CONTENT\" | grep -q \"BEGIN\"; then export NANITOR_ENROLL_TOKEN=$(echo \"$KEY_CONTENT\" | sed -n \"/-----BEGIN/,/-----END/p\" | grep -v \"^-----\" | tr -d \"\\n \"); else export NANITOR_ENROLL_TOKEN=$(cat ${config.sops.secrets.nanitor_enroll_token.path}); fi; fi; if [ -f ${config.sops.secrets.nanitor_endpoint.path} ]; then export NANITOR_ENDPOINT=$(cat ${config.sops.secrets.nanitor_endpoint.path}); fi; echo \"NANITOR_ENROLL_TOKEN=$NANITOR_ENROLL_TOKEN\" > /run/nanitor-agent/env; echo \"NANITOR_ENDPOINT=$NANITOR_ENDPOINT\" >> /run/nanitor-agent/env'"
+            "${lib.getExe pkgs.writeScriptBin "nanitor-setup-env" ''
+              #!${pkgs.bash}/bin/bash
+              set -e
+              mkdir -p /run/nanitor-agent
+
+              ENROLL_TOKEN_FILE=${config.sops.secrets.nanitor_enroll_token.path}
+              ENDPOINT_FILE=${config.sops.secrets.nanitor_endpoint.path}
+
+              if [ -f "$ENROLL_TOKEN_FILE" ]; then
+                KEY_CONTENT=$(cat "$ENROLL_TOKEN_FILE")
+                if echo "$KEY_CONTENT" | grep -q "BEGIN"; then
+                  NANITOR_ENROLL_TOKEN=$(echo "$KEY_CONTENT" | sed -n '/-----BEGIN/,/-----END/p' | grep -v '^-----' | tr -d '\n ')
+                else
+                  NANITOR_ENROLL_TOKEN=$(cat "$ENROLL_TOKEN_FILE")
+                fi
+              fi
+
+              if [ -f "$ENDPOINT_FILE" ]; then
+                NANITOR_ENDPOINT=$(cat "$ENDPOINT_FILE")
+              fi
+
+              echo "NANITOR_ENROLL_TOKEN=$NANITOR_ENROLL_TOKEN" > /run/nanitor-agent/env
+              echo "NANITOR_ENDPOINT=$NANITOR_ENDPOINT" >> /run/nanitor-agent/env
+            ''}"
           ];
           EnvironmentFile = "/run/nanitor-agent/env";
         };
