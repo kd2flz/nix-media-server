@@ -243,43 +243,33 @@ services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
         enable = true;
         package = pkgs.nanitor-agent;
         logLevel = cfg.nanitor.logLevel;
-        enroll.enable = false;
+        enroll.enable = true;
+        enroll.key = "/run/nanitor-agent/key";
+        enroll.serverUrl = "/run/nanitor-agent/endpoint";
       };
 
-      systemd.services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+      systemd.services.nanitor-agent-key = lib.mkIf cfg.nanitor.enable {
+        description = "Extract nanitor enrollment key from PEM format";
+        wantedBy = [ "nanitor-agent.service" ];
+        before = [ "nanitor-agent.service" ];
         serviceConfig = {
-          ExecStart = lib.mkForce [
-            "${pkgs.writeShellScriptBin "nanitor-wrapper" ''
-              #!${pkgs.bash}/bin/bash
-              set -e
-              export PATH=${pkgs.coreutils}/bin:${pkgs.gnused}/bin:${pkgs.gnugrep}/bin:${pkgs.nanitor-agent}/bin
-
-              mkdir -p /run/nanitor-agent
-
-              # Extract enrollment key (handle PEM format)
-              KEY_FILE=${config.sops.secrets.nanitor_enroll_token.path}
-              if [ -f "$KEY_FILE" ]; then
-                KEY_CONTENT=$(cat "$KEY_FILE")
-                if echo "$KEY_CONTENT" | grep -q "BEGIN"; then
-                  echo "$KEY_CONTENT" | sed -n '/-----BEGIN/,/-----END/p' | grep -v '^-----' | tr -d '\n ' > /run/nanitor-agent/key
-                else
-                  cat "$KEY_FILE" > /run/nanitor-agent/key
-                fi
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = pkgs.writeShellScriptBin "extract-key" ''
+            #!${pkgs.bash}/bin/bash
+            set -e
+            mkdir -p /run/nanitor-agent
+            KEY_FILE=${config.sops.secrets.nanitor_enroll_token.path}
+            if [ -f "$KEY_FILE" ]; then
+              KEY_CONTENT=$(cat "$KEY_FILE")
+              if echo "$KEY_CONTENT" | grep -q "BEGIN"; then
+                echo "$KEY_CONTENT" | sed -n '/-----BEGIN/,/-----END/p' | grep -v '^-----' | tr -d '\n ' > /run/nanitor-agent/key
+              else
+                cat "$KEY_FILE" > /run/nanitor-agent/key
               fi
-
-              # Write endpoint URL
-              cat ${config.sops.secrets.nanitor_endpoint.path} > /run/nanitor-agent/endpoint
-
-              # Set server URL and enroll
-              nanitor-agent set-server-url "$(cat /run/nanitor-agent/endpoint)" || true
-              if [ ! -f /var/lib/nanitor-agent/nanitor-agent.json ]; then
-                nanitor-agent signup --key "$(cat /run/nanitor-agent/key)" || true
-              fi
-
-              # Start the agent
-              exec nanitor-agent agent
-            ''}"
-          ];
+            fi
+            cat ${config.sops.secrets.nanitor_endpoint.path} > /run/nanitor-agent/endpoint
+          '';
         };
       };
 
