@@ -244,33 +244,8 @@ services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
         package = pkgs.nanitor-agent;
         logLevel = cfg.nanitor.logLevel;
         enroll.enable = true;
-        enroll.key = "/run/nanitor-agent/key";
-        enroll.serverUrl = "/run/nanitor-agent/endpoint";
-      };
-
-      systemd.services.nanitor-agent-key = lib.mkIf cfg.nanitor.enable {
-        description = "Extract nanitor enrollment key from PEM format";
-        wantedBy = [ "nanitor-agent.service" ];
-        before = [ "nanitor-agent.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = pkgs.writeShellScriptBin "extract-key" ''
-            #!${pkgs.bash}/bin/bash
-            set -e
-            mkdir -p /run/nanitor-agent
-            KEY_FILE=${config.sops.secrets.nanitor_enroll_token.path}
-            if [ -f "$KEY_FILE" ]; then
-              KEY_CONTENT=$(cat "$KEY_FILE")
-              if echo "$KEY_CONTENT" | grep -q "BEGIN"; then
-                echo "$KEY_CONTENT" | sed -n '/-----BEGIN/,/-----END/p' | grep -v '^-----' | tr -d '\n ' > /run/nanitor-agent/key
-              else
-                cat "$KEY_FILE" > /run/nanitor-agent/key
-              fi
-            fi
-            cat ${config.sops.secrets.nanitor_endpoint.path} > /run/nanitor-agent/endpoint
-          '';
-        };
+        enroll.keyFile = config.sops.secrets.nanitor_enroll_token.path;
+        enroll.serverUrlFile = config.sops.secrets.nanitor_endpoint.path;
       };
 
       
