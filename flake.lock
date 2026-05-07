@@ -45,11 +45,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1778070115,
-        "narHash": "sha256-3l/oJ/1DuZsOvXQAF570PtHpbopQdUhv5AGdKBp/xCY=",
+        "lastModified": 1778116310,
+        "narHash": "sha256-eN5ypRG9LQFn8F0jPYao3T00j39H5PRcUR9dvSK1694=",
         "owner": "kd2flz",
         "repo": "nanitor-agent",
-        "rev": "6035ea9dffe9e7c0cfd49f2b6e4a9dca871d3ac5",
+        "rev": "6280afb92b5734e4f1ebab224824fcf423767d4d",
         "type": "github"
       },
       "original": {
