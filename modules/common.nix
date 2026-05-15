@@ -27,6 +27,7 @@
     initialPassword = "pleasechangeme";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBvUDztxgvoUy+8Q4FoSflZ2ezd3dBhKqFOm8mGvBHW+"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE0ARZVaze3Za4h3q12NKKB3f2fpIi4m4sEkh0wf5apy" # L36789-nix
     ];
   };
   # LAN networking
