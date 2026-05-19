@@ -2,6 +2,10 @@
 { pkgs, lib, ... }:
 {
 
+  imports = [
+    ../../modules/nanitor-agent-override.nix
+  ];
+
   services.monitoring.enable = true;
 
   # Optional dead-man-switch:
