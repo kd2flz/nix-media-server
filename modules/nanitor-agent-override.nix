@@ -1,9 +1,8 @@
 # Override for nanitor-agent module to fix v7 enrollment key format issue
-# Issue: The upstream module splits JWT + SIGNATURE onto separate lines,
-# but nanitor-agent v7 expects them on a single line.
+# Issue: The upstream module incorrectly handles the ' + ' separator in the key body.
+# The nanitor-agent v7 expects: JWT on one line, '+' on another line, SIGNATURE on third line.
 #
-# This module can be imported to override the systemd preStart script
-# with the correct format.
+# This module overrides the preStart script to correctly format the key.
 
 { config, lib, pkgs, ... }:
 
@@ -39,12 +38,25 @@ in
         _BODY=$(echo "$_RAW" | sed 's/^[[:space:]]*-----BEGIN[^-]*-----[[:space:]]*//' | sed 's/[[:space:]]*-----END[^-]*-----[[:space:]]*$//' | tr -d '\r\n')
         _LABEL=$(echo "$_RAW" | grep -o 'BEGIN [^-]*' | sed 's/BEGIN //' | tr -d '\r\n' | sed 's/[[:space:]]*$//')
 
-        # FIX: Keep JWT + SIGNATURE on ONE line (don't split them)
-        echo "[nanitor-agent unit] Writing single-line PEM format (JWT + SIG on same line)"
-        printf '%s\n%s\n%s\n' \
-          "-----BEGIN ''${_LABEL}-----" \
-          "$_BODY" \
-          "-----END ''${_LABEL}-----" > "$NANITOR_KEY_TMPFILE"
+        # FIX: Split JWT and SIGNATURE with '+' on separate lines (as v7 expects)
+        if echo "$_BODY" | grep -qF ' + '; then
+          # Extract JWT and signature from "JWT + SIGNATURE" format
+          _JWT=$(echo "$_BODY" | sed 's/ + .*//')
+          _SIG=$(echo "$_BODY" | sed 's/.* + //')
+          echo "[nanitor-agent unit] Writing multi-line PEM format (JWT, +, SIG on separate lines)"
+          printf '%s\n%s\n%s\n%s\n%s\n' \
+            "-----BEGIN ''${_LABEL}-----" \
+            "$_JWT" \
+            "+" \
+            "$_SIG" \
+            "-----END ''${_LABEL}-----" > "$NANITOR_KEY_TMPFILE"
+        else
+          echo "[nanitor-agent unit] Writing single-line PEM format (no separator found)"
+          printf '%s\n%s\n%s\n' \
+            "-----BEGIN ''${_LABEL}-----" \
+            "$_BODY" \
+            "-----END ''${_LABEL}-----" > "$NANITOR_KEY_TMPFILE"
+        fi
 
         echo "[nanitor-agent unit] Key file staged for signup ($(wc -l < "$NANITOR_KEY_TMPFILE") lines)"
       ''}
