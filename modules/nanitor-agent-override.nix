@@ -3,6 +3,15 @@
 # The nanitor-agent v7 expects: JWT on one line, '+' on another line, SIGNATURE on third line.
 #
 # This module overrides the preStart script to correctly format the key.
+#
+# Upstream issue: https://github.com/kd2flz/nanitor-agent/issues/9
+# See docs/nanitor-issue-9-comment.md for detailed root cause analysis.
+#
+# BACKWARD COMPATIBILITY: This override will remain compatible if/when upstream
+# fixes the issue because it:
+# 1. Handles keys with ' + ' separator by splitting them correctly
+# 2. Handles keys without ' + ' separator by passing them through unchanged
+# 3. Can be safely removed once upstream module is fixed
 
 { config, lib, pkgs, ... }:
 
