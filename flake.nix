@@ -57,6 +57,11 @@
         ssh-to-age
       ];
       shellHook = ''
+        # The admin recipient in .sops.yaml is an ssh-ed25519 key, so sops uses
+        # its SSH code path which only reads SOPS_AGE_SSH_PRIVATE_KEY_FILE.
+        # SOPS_AGE_KEY (converted via ssh-to-age) is kept as a fallback for
+        # configurations that use a native age recipient.
+        export SOPS_AGE_SSH_PRIVATE_KEY_FILE=$HOME/.ssh/sops-admin
         export SOPS_AGE_KEY=$(ssh-to-age -private-key -i ~/.ssh/sops-admin 2>/dev/null)
       '';
     };

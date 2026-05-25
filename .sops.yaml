@@ -8,9 +8,11 @@
 keys:
     - &admin ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIIKRNK9GcahrGo2Wg4Rj+icoMRq7krbdbzlV+tZkCuS
     - &t29769 age15qtqqhe9pl4ucsjm9tkyamq5wkwytp70gvmarx3p46s44vuldy4snnaa7u
+    - &p27691 age1qjd3u3v95w7xwq8tyn4yxe7c58wcsyde2fvegm7cht7suthp8s2sptdw2q
 creation_rules:
     - path_regex: secrets/[^/]+\.yaml$
       key_groups:
           - age:
                 - *admin
                 - *t29769
+                - *p27691
