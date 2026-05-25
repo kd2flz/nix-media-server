@@ -193,20 +193,91 @@ sudo nixos-rebuild switch --flake .#new-hostname
 
 ## Adding a New Host
 
-1. **Copy an existing host configuration**:
+**Important:** The directory name under `hosts/` **must exactly match the machine's NixOS hostname** (`networking.hostName`). Comin matches the running machine's hostname to `nixosConfigurations.<name>` at deployment time. A mismatch means the host pulls the wrong config.
+
+1. **Create the host directory** (use the machine's actual hostname):
    ```bash
-   cp -r hosts/T29769 hosts/new-hostname
+   mkdir hosts/<hostname>
    ```
 
-2. **Generate hardware configuration** for the new host:
+2. **Generate hardware configuration** on the target machine:
    ```bash
-   sudo nixos-generate-config --show-hardware-config > hosts/new-hostname/hardware.nix
+   sudo nixos-generate-config --show-hardware-config > hosts/<hostname>/hardware.nix
    ```
-    - This generated config might need a little cleanup but should include all the necessary hardware settings.
 
-3. **Update `hosts/new-hostname/default.nix`** with the new hostname and settings.
+3. **Create `hosts/<hostname>/default.nix`** with the host-specific settings:
+   ```nix
+   { pkgs, lib, config, ... }:
+   {
+     networking.hostName = "<hostname>";
+     time.timeZone = "America/New_York";
+     sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+     services.monitoring.enable = true;
+     services.mediaServer = {
+       enable     = true;
+       domainBase = "<hostname>.yourdomain.com";
+       tlsMode    = "internal";
+       gpu        = "intel";     # or "nvidia" or "none"
+       audiobookshelf.enable = true;
+       jellyfin.enable       = true;
+       wizarr.enable         = true;
+       samba.enable          = true;
+       nanitor.enable        = true;
+     };
+   }
+   ```
 
-4. **Add the host to sops-nix** (see Secrets Management below).
+   If using nanitor, also add to `imports`:
+   ```nix
+   imports = [ ../../modules/nanitor-agent-override.nix ];
+   ```
+
+4. **Configure the GPU** (set `services.mediaServer.gpu`):
+   - `"intel"` — adds `intel-media-driver` for VA-API (most workstations/servers)
+   - `"nvidia"` — loads the proprietary NVIDIA driver and wires NVENC/NVDEC permissions for Jellyfin. Use `hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_470` in `default.nix` for pre-Pascal (GTX 900 or older) cards.
+   - `"none"` — software transcoding only
+
+5. **Set up BTRFS RAID1 media storage** (if using two drives for redundancy):
+
+   On the machine, format both drives as a single mirrored BTRFS volume:
+   ```bash
+   # Find disk IDs (use by-id, not /dev/sdX which can change on reboot)
+   ls /dev/disk/by-id/ | grep -v part
+
+   # Format as BTRFS RAID1 (mirrors both data AND metadata)
+   mkfs.btrfs -L media -m raid1 -d raid1 \
+     /dev/disk/by-id/<drive1> /dev/disk/by-id/<drive2>
+
+   # Get the UUID
+   blkid | grep 'LABEL="media"'
+   ```
+
+   Add the mount to `hardware.nix`:
+   ```nix
+   fileSystems."/srv/media" = {
+     device  = "UUID=<uuid-from-blkid>";
+     fsType  = "btrfs";
+     options = [ "compress=zstd" "autodefrag" "nofail" ];
+   };
+   ```
+
+   Add a monthly scrub (integrity check) to `default.nix`:
+   ```nix
+   services.btrfs.autoScrub = {
+     enable      = true;
+     interval    = "monthly";
+     fileSystems = [ "/srv/media" ];
+   };
+   ```
+
+   If a drive fails later, replace it online (no downtime):
+   ```bash
+   btrfs replace start /dev/disk/by-id/<new-drive> /srv/media
+   ```
+
+6. **(Optional) Override Comin branch** — by default all new hosts track `main`. To make a host track `dev` instead (sandbox), edit `getCominBranch` in `flake.nix`.
+
+7. **Add the host to sops-nix** (see Secrets Management below).
 
 ***
 
@@ -232,10 +303,9 @@ This outputs something like: `age1abc123...`
 
 ```yaml
 keys:
-  - &admin age1personal        # Your personal editing key
-  - &t29769 age1T29769         # T29769 SSH host key (ed25519)
-  - &belmedia age1belmedia     # belmedia SSH host key (ed25519)
-  - &newhost age1abc123       # NEW HOST - add this line
+  - &admin  age1personal    # Your personal editing key
+  - &t29769 age1T29769      # T29769 SSH host key (ed25519)
+  - &newhost age1abc123     # NEW HOST - add this line
 
 creation_rules:
   - path_regex: secrets/[^/]+\.yaml$
@@ -243,7 +313,6 @@ creation_rules:
       - age:
           - *admin
           - *t29769
-          - *belmedia
           - *newhost    # Add this reference
 ```
 

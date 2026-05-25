@@ -81,6 +81,18 @@ in
       default = "info";
       description = "Log level for nanitor agent (debug, info, warn, error).";
     };
+
+    gpu = lib.mkOption {
+      type = lib.types.enum [ "intel" "nvidia" "none" ];
+      default = "intel";
+      description = ''
+        GPU type for hardware-accelerated transcoding.
+        "intel"  → loads intel-media-driver (VA-API).
+        "nvidia" → loads NVIDIA proprietary driver, NVENC/NVDEC; adds Jellyfin user
+                   to video+render groups for device access.
+        "none"   → software transcode only.
+      '';
+    };
   };
 
 
@@ -102,7 +114,7 @@ in
     users.users.jellyfin = lib.mkIf cfg.jellyfin.enable {
       isSystemUser = true;
       group = "jellyfin";
-      extraGroups = [ "media" ];   # read access to /srv/media/*
+      extraGroups = [ "media" ] ++ lib.optionals (cfg.gpu == "nvidia") [ "video" "render" ];
     };
 
     services.jellyfin = lib.mkIf cfg.jellyfin.enable {
@@ -296,10 +308,19 @@ services.caddy = {
     };
 
     ########################################
-    # Hardware video accel (Intel)
+    # Hardware video acceleration
     ########################################
     hardware.graphics.enable = true;
-    hardware.graphics.extraPackages = with pkgs; [ intel-media-driver ];
+    hardware.graphics.extraPackages =
+      lib.optionals (cfg.gpu == "intel") (with pkgs; [ intel-media-driver ]);
+
+    # NVIDIA proprietary driver (loaded via videoDrivers; modesetting required for Wayland/GNOME)
+    services.xserver.videoDrivers = lib.mkIf (cfg.gpu == "nvidia") [ "nvidia" ];
+    hardware.nvidia.modesetting.enable = lib.mkIf (cfg.gpu == "nvidia") true;
+    hardware.nvidia.open = lib.mkIf (cfg.gpu == "nvidia") false;
+    hardware.nvidia.powerManagement.enable = lib.mkIf (cfg.gpu == "nvidia") false;
+    hardware.nvidia.nvidiaSettings = lib.mkIf (cfg.gpu == "nvidia") false;
+    hardware.nvidia.package = lib.mkIf (cfg.gpu == "nvidia") config.boot.kernelPackages.nvidiaPackages.stable;
 
     ########################################
     # Health

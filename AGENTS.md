@@ -99,10 +99,38 @@ myOption = lib.mkOption {
 ## Common Tasks
 
 ### Add New Host
-1. Copy `hosts/T29769/` to new directory
-2. Run `nixos-generate-config --show-hardware-config` on the target machine
-3. Update `hosts/<name>/hardware.nix` with the output
-4. Add host to `getCominBranch` function in flake.nix if needed
+
+**Critical constraint:** The `hosts/<name>/` directory name must exactly match `networking.hostName` in `default.nix`. Comin maps `nixosConfigurations.<hostname>` to the running machine at deploy time — a mismatch causes the wrong config to be deployed.
+
+1. Create `hosts/<hostname>/` using the machine's actual hostname (asset tag, e.g. `P27691`).
+
+2. On the target machine, generate the hardware config:
+   ```bash
+   sudo nixos-generate-config --show-hardware-config > hosts/<hostname>/hardware.nix
+   ```
+   If adding BTRFS RAID1 media storage, also add a `fileSystems."/srv/media"` entry (see README).
+
+3. Create `hosts/<hostname>/default.nix`. Required fields:
+   - `networking.hostName` — must match directory name
+   - `time.timeZone`
+   - `sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ]`
+   - `services.mediaServer.enable = true`
+   - `services.mediaServer.domainBase` — base domain for Caddy vhosts
+   - `services.mediaServer.gpu` — `"intel"`, `"nvidia"`, or `"none"`
+   - If `nanitor.enable = true`, also add `imports = [ ../../modules/nanitor-agent-override.nix ]`
+
+4. GPU setup (set `services.mediaServer.gpu`):
+   - `"intel"` → intel-media-driver (VA-API), default
+   - `"nvidia"` → NVIDIA proprietary driver, NVENC/NVDEC, Jellyfin device permissions. For pre-Pascal cards (GTX 900 or older), also set `hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_470` in default.nix.
+   - `"none"` → software transcoding only
+
+5. For BTRFS RAID1 media storage, see README "Adding a New Host" — format drives with `mkfs.btrfs -m raid1 -d raid1`, get UUID from `blkid`, add to `hardware.nix`.
+
+6. If this is a sandbox/testing host, add it to `getCominBranch` in `flake.nix` to track `dev` instead of `main`. All other hosts default to `main`.
+
+7. Add the host to sops-nix (see README "Adding a New Host to Secrets").
+   - Get age key: `sudo cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age`
+   - Add to `.sops.yaml`, run `sops updatekeys secrets/secrets.yaml`, commit and push.
 
 ### Add New Service to Media Server
 Edit `modules/media-server.nix`:
