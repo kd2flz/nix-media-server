@@ -227,16 +227,6 @@ in
       # Log Level Options: debug, info, warn, error (default: info)
       #
 
-      services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
-        enable = true;
-        logLevel = cfg.nanitor.logLevel;
-        enroll.enable = true;
-        environment = {
-          NANITOR_ENROLL_TOKEN = config.sops.secrets.nanitor_enroll_token.path;
-          NANITOR_ENDPOINT = config.sops.secrets.nanitor_endpoint.path;
-        };
-      };
-
       sops.secrets.nanitor_enroll_token = lib.mkIf cfg.nanitor.enable {
         mode = "0440";
         owner = "root";
@@ -248,6 +238,17 @@ in
         owner = "root";
         group = "root";
       };
+
+services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
+        enable = true;
+        package = pkgs.nanitor-agent;
+        logLevel = cfg.nanitor.logLevel;
+        enroll.enable = true;
+        enroll.keyFile = config.sops.secrets.nanitor_enroll_token.path;
+        enroll.serverUrlFile = config.sops.secrets.nanitor_endpoint.path;
+      };
+
+      
 
 
     ########################################

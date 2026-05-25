@@ -1,20 +1,25 @@
 
 { config, lib, pkgs, ... }:
 {
-  
+
   # Enable SSH
-  services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+    settings = {
+     MaxAuthTries = 10;
+    };
+  };
 
   # Automatic Updating
  system.autoUpgrade.enable = true;
  system.autoUpgrade.dates = "weekly";
- 
+
  # Automatic Cleanup
  nix.gc.automatic = true;
  nix.gc.dates = "daily";
  nix.gc.options = "--delete-older-than 10d";
  nix.settings.auto-optimise-store = true;
- 
+
  # Define admin user
   users.users.admin = {
     isNormalUser = true;
@@ -22,11 +27,12 @@
     initialPassword = "pleasechangeme";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBvUDztxgvoUy+8Q4FoSflZ2ezd3dBhKqFOm8mGvBHW+"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE0ARZVaze3Za4h3q12NKKB3f2fpIi4m4sEkh0wf5apy" # L36789-nix
     ];
   };
   # LAN networking
   networking.networkmanager.enable = true;
-  
+
   # Enable Podman
   virtualisation.containers.enable = true;
   virtualisation.podman.enable = true;
