@@ -47,7 +47,7 @@
   #   btrfs replace start /dev/disk/by-id/<replacement> /srv/media
   #
   fileSystems."/srv/media" =
-    { device = "UUID=FILL_IN_AFTER_MKFS";
+    { device = "UUID=9098d112-a4ca-4af0-9da5-2e3e6aa0da1b";
       fsType = "btrfs";
       options = [ "compress=zstd" "autodefrag" "nofail" ];
     };
@@ -58,6 +58,4 @@
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-
-  boot.loader.grub.devices = [ "/dev/sda" ];
 }
