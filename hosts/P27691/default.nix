@@ -10,6 +10,10 @@
   networking.hostName = "P27691";
   time.timeZone = "America/New_York";
 
+  # UEFI boot (NVMe with /boot vfat ESP at nvme0n1p3)
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
+
   # sops: decrypt secrets at boot using the host's SSH host key
   sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
