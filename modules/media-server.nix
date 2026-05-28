@@ -122,8 +122,13 @@ in
       openFirewall = true;
     };
 
-    systemd.services.jellyfin.serviceConfig.PreStart = lib.mkIf cfg.jellyfin.enable (lib.mkAfter ''
-      ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
+    # Enable Jellyfin's Prometheus metrics endpoint by flipping <EnableMetrics> in system.xml.
+    # On first start the file doesn't exist yet, so guard with -f; metrics get enabled on the
+    # next restart after Jellyfin generates its config.
+    systemd.services.jellyfin.preStart = lib.mkIf cfg.jellyfin.enable (lib.mkAfter ''
+      if [ -f /var/lib/jellyfin/config/system.xml ]; then
+        ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
+      fi
     '');
 
     # Optional: provide the ffmpeg build Jellyfin expects
