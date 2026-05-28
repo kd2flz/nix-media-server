@@ -377,18 +377,45 @@ sudo smbpasswd -e admin
 
 The user can now authenticate when connecting to the share from Windows, macOS, or Linux.
 
-Connecting to the Share
-From another computer on your LAN:
-\\hostname\media
+### Connecting to the Share
 
-or
-smb://hostname/media
+In all cases, credentials are:
+- **Username:** `admin`
+- **Password:** the Samba password set with `smbpasswd` above (NOT the Linux login password)
+- **Domain:** leave blank, or the server's hostname
 
-When you are asked for credentials, use the following information:
+#### From Windows
 
-Username: admin
-Password: [samba password set above]
-Domain: Server Hostname
+The reliable way is **PowerShell**, not File Explorer's "Map Network Drive" dialog. File Explorer's mapper defaults to your current Windows login credentials (which Samba doesn't know about) and fails with a misleading "A device attached to your system is not functioning" error.
+
+Open PowerShell and run:
+
+```powershell
+net use M: \\<hostname>\media /user:admin /persistent:yes
+```
+
+For example: `net use M: \\P27691\media /user:admin /persistent:yes`
+
+You'll be prompted for the Samba password once. The share appears as drive `M:` in File Explorer and auto-reconnects on every login.
+
+To disconnect later: `net use M: /delete`
+
+If you prefer the "Map Network Drive" GUI, you **must** check "Connect using different credentials" in the dialog — otherwise it silently tries your Windows login and fails.
+
+#### From macOS
+
+Finder → ⌘K → enter `smb://<hostname>/media`. Authenticate when prompted.
+
+#### From Linux
+
+```bash
+# Browse with smbclient:
+smbclient //<hostname>/media -U admin
+
+# Or mount persistently (requires cifs-utils):
+sudo mount -t cifs //<hostname>/media /mnt/media \
+  -o username=admin,uid=$(id -u),gid=$(id -g)
+```
 
 ## GitOps Deployment with Comin
 
