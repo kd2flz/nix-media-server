@@ -17,6 +17,51 @@
   # sops: decrypt secrets at boot using the host's SSH host key
   sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
+  # Wildcard TLS certificate for media-bel.ccistack.com (PKCS#12) and its password
+  sops.secrets.media_tls_pk12 = {
+    mode = "0440";
+    owner = "root";
+    group = "root";
+  };
+
+  sops.secrets.media_tls_pk12_pass = {
+    mode = "0440";
+    owner = "root";
+    group = "root";
+  };
+
+  # Extract PEM cert+key from PKCS#12 before Caddy starts
+  systemd.services.extract-media-tls = {
+    description = "Extract wildcard TLS cert+key from PKCS#12 for Caddy";
+    wantedBy = [ "caddy.service" ];
+    before = [ "caddy.service" ];
+    unitConfig = {
+      Requires = [ "sops-nix.service" ];
+      After = [ "sops-nix.service" ];
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      mkdir -p /var/lib/caddy/tls
+      # Decode base64-encoded pk12 to temp file, then extract cert+key
+      PK12=$(mktemp)
+      ${pkgs.coreutils}/bin/base64 -d ${config.sops.secrets.media_tls_pk12.path} > "$PK12"
+      ${pkgs.openssl}/bin/openssl pkcs12 \
+        -in "$PK12" \
+        -passin file:${config.sops.secrets.media_tls_pk12_pass.path} \
+        -nokeys -out /var/lib/caddy/tls/cert.pem
+      ${pkgs.openssl}/bin/openssl pkcs12 \
+        -in "$PK12" \
+        -passin file:${config.sops.secrets.media_tls_pk12_pass.path} \
+        -nocerts -nodes -out /var/lib/caddy/tls/key.pem
+      rm -f "$PK12"
+      chmod 644 /var/lib/caddy/tls/cert.pem
+      chmod 640 /var/lib/caddy/tls/key.pem
+    '';
+  };
+
   services.monitoring.enable = true;
 
   services.mediaServer = {
@@ -27,6 +72,8 @@
     #               invites.media-bel.ccistack.com, grafana.media-bel.ccistack.com
     domainBase = "media-bel.ccistack.com";
     tlsMode = "internal";
+    tls.certFile = "/var/lib/caddy/tls/cert.pem";
+    tls.keyFile = "/var/lib/caddy/tls/key.pem";
 
     # NVIDIA GPU (retired SolidWorks PC). Uses stable driver + NVENC/NVDEC for
     # Jellyfin hardware transcoding. If the card is pre-Pascal (GTX 900 or older),

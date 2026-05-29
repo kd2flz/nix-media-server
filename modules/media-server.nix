@@ -93,6 +93,28 @@ in
         "none"   → software transcode only.
       '';
     };
+
+    tls.certFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = ''
+        Full-chain PEM certificate (leaf + intermediates) for Caddy to serve on every vhost.
+        When set together with tls.keyFile, replaces Caddy's "tls internal" with the provided cert.
+        The cert is public — safe to check into the repo. The matching private key MUST go through
+        tls.keyFile (typically a sops-decrypted path).
+      '';
+      example = lib.literalExpression "./certs/media-bel.fullchain.pem";
+    };
+
+    tls.keyFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = ''
+        Private key PEM file. Point this at a sops-nix decrypted path, e.g.
+        config.sops.secrets.media_tls_key.path. The file must be readable by the caddy user.
+      '';
+      example = lib.literalExpression "config.sops.secrets.media_tls_key.path";
+    };
   };
 
 
@@ -132,10 +154,9 @@ in
     '');
 
     # Optional: provide the ffmpeg build Jellyfin expects
-    environment.systemPackages = lib.mkIf cfg.jellyfin.enable (with pkgs; [
-      jellyfin-ffmpeg
-      fastfetch
-    ]);
+    environment.systemPackages = with pkgs;
+      (lib.optionals cfg.jellyfin.enable [ jellyfin-ffmpeg fastfetch ])
+      ++ (lib.optionals (cfg.gpu == "nvidia") [ pkgs.nvtopPackages.nvidia ]);
 
     ########################################
     # Audiobookshelf (Native NixOS service)
@@ -273,29 +294,34 @@ services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
     ########################################
 
 
-services.caddy = {
+services.caddy = let
+      tlsLine =
+        if cfg.tls.certFile != null && cfg.tls.keyFile != null
+        then "tls ${cfg.tls.certFile} ${cfg.tls.keyFile}"
+        else "tls internal";
+    in {
       enable = true;
       resume = false;
 
       # Site blocks only
       extraConfig = ''
         jellyfin.${cfg.domainBase} {
-          tls internal
+          ${tlsLine}
           reverse_proxy 127.0.0.1:8096
         }
         ${lib.optionalString cfg.wizarr.enable ''
         invites.${cfg.domainBase} {
-          tls internal
+          ${tlsLine}
           reverse_proxy 127.0.0.1:5690
         }''}
         ${lib.optionalString cfg.audiobookshelf.enable ''
         books.${cfg.domainBase} {
-          tls internal
+          ${tlsLine}
           reverse_proxy 127.0.0.1:13378
         }''}
         ${lib.optionalString config.services.monitoring.enable ''
         grafana.${cfg.domainBase} {
-          tls internal
+          ${tlsLine}
           reverse_proxy 127.0.0.1:3000
         }''}
       '';
