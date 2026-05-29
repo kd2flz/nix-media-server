@@ -139,23 +139,30 @@ in
 
       provision = {
         enable = true;
-        dashboards.settings.providers = [{
-          name = "NixOS Provisioned";
-          disableDeletion = true;
-          options = {
-            path = "/etc/grafana-dashboards";
-            foldersFromFilesStructure = true;
-          };
-        }];
-        datasources.settings.datasources = [
-          {
-            name = "Prometheus";
-            type = "prometheus";
-            uid = "PBFA97CFB590B2093";
-            url = "http://127.0.0.1:9001";
-            isDefault = true;
-          }
-        ];
+        dashboards.settings = {
+          apiVersion = 1;
+          providers = [{
+            name = "NixOS Provisioned";
+            type = "file";
+            disableDeletion = true;
+            options = {
+              path = "/etc/grafana-dashboards";
+              foldersFromFilesStructure = true;
+            };
+          }];
+        };
+        datasources.settings = {
+          apiVersion = 1;
+          datasources = [
+            {
+              name = "Prometheus";
+              type = "prometheus";
+              uid = "PBFA97CFB590B2093";
+              url = "http://127.0.0.1:9001";
+              isDefault = true;
+            }
+          ];
+        };
         alerting.rules.settings = {
           apiVersion = 1;
           groups = [{
@@ -485,14 +492,15 @@ in
     };
 
     #############################################
-    # Grafana Dashboards (manual provisioning)
+    # Grafana Dashboards (provisioned from ./dashboards into /etc/grafana-dashboards,
+    # which the provider configured above reads on startup)
     #############################################
-   # environment.etc = {
-   #   "grafana-dashboards/system-overview.json".source = ./dashboards/system-overview.json;
-   #   "grafana-dashboards/comin-deploys.json".source = ./dashboards/comin-deploys.json;
-   #   "grafana-dashboards/jellyfin.json".source = ./dashboards/jellyfin.json;
-   #   "grafana-dashboards/audiobookshelf.json".source = ./dashboards/audiobookshelf.json;
-   # };
+    environment.etc = {
+      "grafana-dashboards/system-overview.json".source  = ./dashboards/system-overview.json;
+      "grafana-dashboards/comin-deploys.json".source    = ./dashboards/comin-deploys.json;
+      "grafana-dashboards/jellyfin.json".source         = ./dashboards/jellyfin.json;
+      "grafana-dashboards/audiobookshelf.json".source   = ./dashboards/audiobookshelf.json;
+    };
 
     #############################################
     # Comin exporter (Prometheus)
