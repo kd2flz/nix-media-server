@@ -393,6 +393,7 @@ services.caddy = let
         -nocerts -nodes -out /var/lib/caddy/tls/key.pem
       rm -f "$PK12"
       chmod 644 /var/lib/caddy/tls/cert.pem
+      chown root:caddy /var/lib/caddy/tls/key.pem
       chmod 640 /var/lib/caddy/tls/key.pem
     '');
 
