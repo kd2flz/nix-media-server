@@ -305,10 +305,11 @@ services.caddy = let
 
       # Site blocks only
       extraConfig = ''
+        ${lib.optionalString cfg.jellyfin.enable ''
         jellyfin.${cfg.domainBase} {
           ${tlsLine}
           reverse_proxy 127.0.0.1:8096
-        }
+        }''}
         ${lib.optionalString cfg.wizarr.enable ''
         invites.${cfg.domainBase} {
           ${tlsLine}
