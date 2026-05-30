@@ -380,15 +380,18 @@ services.caddy = let
     # TLS: PKCS#12 → PEM extraction (activation, before systemd)
     ########################################
     system.activationScripts.extract-media-tls = lib.mkIf (cfg.tls.pkcs12File != null) (lib.stringAfter [ "setupSecrets" ] ''
+      PK12=$(mktemp)
+      ${pkgs.coreutils}/bin/base64 -d ${lib.escapeShellArg cfg.tls.pkcs12File} > "$PK12"
       mkdir -p /var/lib/caddy/tls
       ${pkgs.openssl}/bin/openssl pkcs12 \
-        -in ${lib.escapeShellArg cfg.tls.pkcs12File} \
+        -in "$PK12" \
         -passin file:${lib.escapeShellArg cfg.tls.pkcs12PasswordFile} \
         -nokeys -out /var/lib/caddy/tls/cert.pem
       ${pkgs.openssl}/bin/openssl pkcs12 \
-        -in ${lib.escapeShellArg cfg.tls.pkcs12File} \
+        -in "$PK12" \
         -passin file:${lib.escapeShellArg cfg.tls.pkcs12PasswordFile} \
         -nocerts -nodes -out /var/lib/caddy/tls/key.pem
+      rm -f "$PK12"
       chmod 644 /var/lib/caddy/tls/cert.pem
       chmod 640 /var/lib/caddy/tls/key.pem
     '');
