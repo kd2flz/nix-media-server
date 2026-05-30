@@ -30,36 +30,6 @@
     group = "root";
   };
 
-  # Extract PEM cert+key from PKCS#12 before Caddy starts.
-  # sops-nix decrypts secrets during boot activation (not a systemd service),
-  # so sops-secret paths are available by the time services start.
-  systemd.services.extract-media-tls = {
-    description = "Extract wildcard TLS cert+key from PKCS#12 for Caddy";
-    requiredBy = [ "caddy.service" ];
-    before = [ "caddy.service" ];
-    unitConfig.ConditionPathExists = config.sops.secrets.media_tls_pk12.path;
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-    script = ''
-      mkdir -p /var/lib/caddy/tls
-      PK12=$(mktemp)
-      ${pkgs.coreutils}/bin/base64 -d ${config.sops.secrets.media_tls_pk12.path} > "$PK12"
-      ${pkgs.openssl}/bin/openssl pkcs12 \
-        -in "$PK12" \
-        -passin file:${config.sops.secrets.media_tls_pk12_pass.path} \
-        -nokeys -out /var/lib/caddy/tls/cert.pem
-      ${pkgs.openssl}/bin/openssl pkcs12 \
-        -in "$PK12" \
-        -passin file:${config.sops.secrets.media_tls_pk12_pass.path} \
-        -nocerts -nodes -out /var/lib/caddy/tls/key.pem
-      rm -f "$PK12"
-      chmod 644 /var/lib/caddy/tls/cert.pem
-      chmod 640 /var/lib/caddy/tls/key.pem
-    '';
-  };
-
   services.monitoring.enable = true;
 
   services.mediaServer = {
@@ -70,8 +40,8 @@
     #               invites.media-bel.ccistack.com, grafana.media-bel.ccistack.com
     domainBase = "media-bel.ccistack.com";
     tlsMode = "internal";
-    tls.certFile = "/var/lib/caddy/tls/cert.pem";
-    tls.keyFile = "/var/lib/caddy/tls/key.pem";
+    tls.pkcs12File = config.sops.secrets.media_tls_pk12.path;
+    tls.pkcs12PasswordFile = config.sops.secrets.media_tls_pk12_pass.path;
 
     # NVIDIA GPU (retired SolidWorks PC). Uses stable driver + NVENC/NVDEC for
     # Jellyfin hardware transcoding. If the card is pre-Pascal (GTX 900 or older),

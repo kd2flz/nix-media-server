@@ -115,6 +115,28 @@ in
       '';
       example = lib.literalExpression "config.sops.secrets.media_tls_key.path";
     };
+
+    tls.pkcs12File = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = ''
+        Path to a PKCS#12 (.p12/.pk12) wildcard certificate file. When set, the module
+        extracts PEM cert+key to /var/lib/caddy/tls/ during boot activation (before
+        systemd starts) and overrides tls.certFile / tls.keyFile. Expects the p12 file
+        itself to already be decrypted (e.g. via sops-nix).
+      '';
+      example = lib.literalExpression "config.sops.secrets.media_tls_pk12.path";
+    };
+
+    tls.pkcs12PasswordFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = ''
+        Path to a file containing the PKCS#12 password. Used together with
+        tls.pkcs12File. Typically a sops-nix decrypted path.
+      '';
+      example = lib.literalExpression "config.sops.secrets.media_tls_pk12_pass.path";
+    };
   };
 
 
@@ -353,6 +375,27 @@ services.caddy = let
     hardware.nvidia.powerManagement.enable = lib.mkIf (cfg.gpu == "nvidia") false;
     hardware.nvidia.nvidiaSettings = lib.mkIf (cfg.gpu == "nvidia") false;
     hardware.nvidia.package = lib.mkIf (cfg.gpu == "nvidia") config.boot.kernelPackages.nvidiaPackages.stable;
+
+    ########################################
+    # TLS: PKCS#12 → PEM extraction (activation, before systemd)
+    ########################################
+    system.activationScripts.extract-media-tls = lib.mkIf (cfg.tls.pkcs12File != null) (lib.stringAfter [ "setupSecrets" ] ''
+      mkdir -p /var/lib/caddy/tls
+      ${pkgs.openssl}/bin/openssl pkcs12 \
+        -in ${lib.escapeShellArg cfg.tls.pkcs12File} \
+        -passin file:${lib.escapeShellArg cfg.tls.pkcs12PasswordFile} \
+        -nokeys -out /var/lib/caddy/tls/cert.pem
+      ${pkgs.openssl}/bin/openssl pkcs12 \
+        -in ${lib.escapeShellArg cfg.tls.pkcs12File} \
+        -passin file:${lib.escapeShellArg cfg.tls.pkcs12PasswordFile} \
+        -nocerts -nodes -out /var/lib/caddy/tls/key.pem
+      chmod 644 /var/lib/caddy/tls/cert.pem
+      chmod 640 /var/lib/caddy/tls/key.pem
+    '');
+
+    # Override certFile/keyFile when pkcs12File is set
+    services.mediaServer.tls.certFile = lib.mkIf (cfg.tls.pkcs12File != null) "/var/lib/caddy/tls/cert.pem";
+    services.mediaServer.tls.keyFile = lib.mkIf (cfg.tls.pkcs12File != null) "/var/lib/caddy/tls/key.pem";
 
     ########################################
     # Health
