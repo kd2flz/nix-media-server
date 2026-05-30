@@ -30,22 +30,20 @@
     group = "root";
   };
 
-  # Extract PEM cert+key from PKCS#12 before Caddy starts
+  # Extract PEM cert+key from PKCS#12 before Caddy starts.
+  # sops-nix decrypts secrets during boot activation (not a systemd service),
+  # so sops-secret paths are available by the time services start.
   systemd.services.extract-media-tls = {
     description = "Extract wildcard TLS cert+key from PKCS#12 for Caddy";
-    wantedBy = [ "caddy.service" ];
+    requiredBy = [ "caddy.service" ];
     before = [ "caddy.service" ];
-    unitConfig = {
-      Requires = [ "sops-nix.service" ];
-      After = [ "sops-nix.service" ];
-    };
+    unitConfig.ConditionPathExists = config.sops.secrets.media_tls_pk12.path;
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
     };
     script = ''
       mkdir -p /var/lib/caddy/tls
-      # Decode base64-encoded pk12 to temp file, then extract cert+key
       PK12=$(mktemp)
       ${pkgs.coreutils}/bin/base64 -d ${config.sops.secrets.media_tls_pk12.path} > "$PK12"
       ${pkgs.openssl}/bin/openssl pkcs12 \
