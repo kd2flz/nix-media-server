@@ -37,8 +37,20 @@ You can customize its behavior using these options:
 *   `services.mediaServer.tlsMode`  
     TLS mode for Caddy:
     *   `"none"` → HTTP only
-    *   `"internal"` → Caddy’s internal CA  
+    *   `"internal"` → Caddy's internal CA  
         *(Default: `"none"`)*
+
+*   `services.mediaServer.tls.certFile`  
+    Full-chain PEM certificate file for Caddy. Set together with `tls.keyFile` to replace Caddy's `tls internal` with a provided certificate.
+
+*   `services.mediaServer.tls.keyFile`  
+    Private key PEM file. Typically a sops-nix decrypted path.
+
+*   `services.mediaServer.tls.pkcs12File`  
+    Path to a PKCS#12 (.p12) wildcard certificate. Automatically extracts PEM cert+key at boot and overrides `tls.certFile`/`tls.keyFile`.
+
+*   `services.mediaServer.tls.pkcs12PasswordFile`  
+    Path to a file containing the PKCS#12 password. Used together with `tls.pkcs12File`.
 
 *   `services.mediaServer.paths`  
     Define media library paths:
@@ -278,6 +290,46 @@ sudo nixos-rebuild switch --flake .#new-hostname
 6. **(Optional) Override Comin branch** — by default all new hosts track `main`. To make a host track `dev` instead (sandbox), edit `getCominBranch` in `flake.nix`.
 
 7. **Add the host to sops-nix** (see Secrets Management below).
+
+***
+
+### Adding a Wildcard TLS Certificate (PKCS#12)
+
+To serve all vhosts with a wildcard certificate instead of Caddy's internal CA:
+
+1. **Request a wildcard cert** from your CA for `*.your.domain`. Ensure the **SAN (Subject Alternative Name)** includes both `DNS:*.your.domain` and `DNS:your.domain` — modern browsers ignore the CN and only check the SAN.
+
+2. **Add sops secret definitions** to your host config:
+   ```nix
+   sops.secrets.media_tls_pk12 = {
+     mode = "0440";
+     owner = "root";
+     group = "root";
+   };
+   sops.secrets.media_tls_pk12_pass = {
+     mode = "0440";
+     owner = "root";
+     group = "root";
+   };
+   ```
+
+3. **Set the pkcs12 options** in the mediaServer config:
+   ```nix
+   services.mediaServer = {
+     tls.pkcs12File = config.sops.secrets.media_tls_pk12.path;
+     tls.pkcs12PasswordFile = config.sops.secrets.media_tls_pk12_pass.path;
+   };
+   ```
+
+4. **Base64-encode the p12 and add to sops**:
+   ```bash
+   nix develop
+   base64 -w0 your-cert.p12 > /tmp/p12.b64
+   sops secrets/secrets.yaml
+   ```
+   Add `media_tls_pk12: <base64 string>` and `media_tls_pk12_pass: "<password>"`.
+
+5. **Commit, push, deploy**. The module's activation script extracts PEM cert+key to `/var/lib/caddy/tls/` during boot, before Caddy starts.
 
 ***
 
