@@ -132,6 +132,45 @@ myOption = lib.mkOption {
    - Get age key: `sudo cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age`
    - Add to `.sops.yaml`, run `sops updatekeys secrets/secrets.yaml`, commit and push.
 
+### Add Wildcard TLS Certificate (PKCS#12)
+
+To serve all vhosts (`jellyfin.*`, `books.*`, `invites.*`, `grafana.*`) with a wildcard cert instead of Caddy's `tls internal`:
+
+1. **Get a PKCS#12 (.p12) wildcard cert** issued for `*.your.domain`. Ensure the **SAN (Subject Alternative Name)** includes `DNS:*.your.domain` and `DNS:your.domain` — modern browsers ignore the CN and only check the SAN.
+
+2. **Add sops secrets** in `hosts/<hostname>/default.nix`:
+   ```nix
+   sops.secrets.media_tls_pk12 = {
+     mode = "0440";
+     owner = "root";
+     group = "root";
+   };
+   sops.secrets.media_tls_pk12_pass = {
+     mode = "0440";
+     owner = "root";
+     group = "root";
+   };
+   ```
+
+3. **Set the pkcs12 options** in the mediaServer config:
+   ```nix
+   services.mediaServer = {
+     ...
+     tls.pkcs12File = config.sops.secrets.media_tls_pk12.path;
+     tls.pkcs12PasswordFile = config.sops.secrets.media_tls_pk12_pass.path;
+   };
+   ```
+
+4. **Base64-encode the p12 and add to sops**:
+   ```bash
+   nix develop
+   base64 -w0 your-cert.p12 > /tmp/p12.b64
+   sops secrets/secrets.yaml
+   ```
+   Add `media_tls_pk12: <paste base64 string>` and `media_tls_pk12_pass: "<password>"`.
+
+5. **Commit, push, deploy**. The module's activation script extracts PEM cert+key to `/var/lib/caddy/tls/` during boot, before Caddy starts.
+
 ### Add New Service to Media Server
 Edit `modules/media-server.nix`:
 1. Add option under `options.services.mediaServer`

@@ -246,9 +246,6 @@ in
       virtualisation.oci-containers.containers.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) {
           image = "ghcr.io/wizarrrr/wizarr:latest";
 
-          # Allow Wizarr to bind to all interfaces
-          ports = [ "5690:5690" ];
-
           volumes = [
             "/var/wizarr:/data"
           ];
@@ -261,7 +258,10 @@ in
             DISABLE_BUILTIN_AUTH = "false";
           };
 
-          extraOptions = [ "--name=wizarr" ];
+          extraOptions = [
+            "--name=wizarr"
+            "--network=host"
+          ];
          };
 
 
