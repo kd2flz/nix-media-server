@@ -55,6 +55,17 @@ in
   ########################################
   config = lib.mkIf cfg.enable {
 
+    # The nixpkgs ollama package runs a large Go test suite during build which
+    # exhausts RAM and time on modest hardware. Override to skip checks — the
+    # binary is still compiled in full; only the test runner is suppressed.
+    nixpkgs.overlays = [
+      (final: prev: {
+        ollama = prev.ollama.overrideAttrs (_: { doCheck = false; });
+        ollama-cuda = prev.ollama-cuda.overrideAttrs (_: { doCheck = false; });
+        ollama-rocm = prev.ollama-rocm.overrideAttrs (_: { doCheck = false; });
+      })
+    ];
+
     services.ollama = {
       enable = true;
       host = cfg.host;
