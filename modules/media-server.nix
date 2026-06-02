@@ -197,7 +197,7 @@ in
       group = "audiobookshelf";
       host = "0.0.0.0";
       port = 13378;
-      openFirewall = true; #Temporily allow direct access
+      openFirewall = false; # Caddy handles external access; direct port not exposed
     };
 
      ########################################
@@ -250,9 +250,12 @@ in
             "/var/wizarr:/data"
           ];
 
+          # PUID/PGID are informational for the container image — the actual
+          # volume mount permissions are controlled by the wizarr system user
+          # created above (UID assigned by NixOS). These values match that user.
           environment = {
-            PUID = "1000";
-            PGID = "1000";
+            PUID = "999";
+            PGID = "999";
             TZ = config.time.timeZone or "UTC";
             WIZARR_HOST = "0.0.0.0";
             DISABLE_BUILTIN_AUTH = "false";
@@ -358,7 +361,11 @@ services.caddy = let
     ########################################
     networking.firewall = {
       enable = true;
-      allowedTCPPorts = [ 80 443 5690 3000 9001 ];
+      # Always open HTTP/HTTPS for Caddy.
+      # Only open service-specific ports when those services are enabled.
+      allowedTCPPorts = [ 80 443 ]
+        ++ lib.optionals cfg.wizarr.enable [ 5690 ]
+        ++ lib.optionals config.services.monitoring.enable [ 3000 9001 ];
     };
 
     ########################################
@@ -380,8 +387,12 @@ services.caddy = let
     # TLS: PKCS#12 → PEM extraction (activation, before systemd)
     ########################################
     system.activationScripts.extract-media-tls = lib.mkIf (cfg.tls.pkcs12File != null) (lib.stringAfter [ "setupSecrets" ] ''
-      PK12=$(mktemp)
+      # Create a private temp dir so the intermediate p12 file is root-only
+      TMPDIR=$(mktemp -d)
+      chmod 700 "$TMPDIR"
+      PK12="$TMPDIR/cert.p12"
       ${pkgs.coreutils}/bin/base64 -d ${lib.escapeShellArg cfg.tls.pkcs12File} > "$PK12"
+      chmod 600 "$PK12"
       mkdir -p /var/lib/caddy/tls
       ${pkgs.openssl}/bin/openssl pkcs12 \
         -in "$PK12" \
@@ -391,7 +402,7 @@ services.caddy = let
         -in "$PK12" \
         -passin file:${lib.escapeShellArg cfg.tls.pkcs12PasswordFile} \
         -nocerts -nodes -out /var/lib/caddy/tls/key.pem
-      rm -f "$PK12"
+      rm -rf "$TMPDIR"
       chmod 644 /var/lib/caddy/tls/cert.pem
       chown root:caddy /var/lib/caddy/tls/key.pem
       chmod 640 /var/lib/caddy/tls/key.pem

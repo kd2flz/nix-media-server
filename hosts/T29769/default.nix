@@ -32,7 +32,7 @@
   services.mediaServer = {
     enable = true;
     domainBase = "t29769.community.int"; # site-specific base domain
-    tlsMode = "internal";                        # or "internal" if you want internal CA
+    tlsMode = "internal";                        # Caddy issues certificates via its internal CA
 
     paths = {
       root = "/srv/media";
@@ -42,7 +42,7 @@
     };
 
     audiobookshelf.enable = true;
-    jellyfin.enable = false;
+    jellyfin.enable = true;
     wizarr.enable = true;
     nanitor.enable = true;
   };

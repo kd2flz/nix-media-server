@@ -10,12 +10,16 @@ Adding a new host? See the [Adding a new Host](#Adding-a-New-Host).
 
 *   **Jellyfin**: Free and open-source media system for managing and streaming video and music.
 *   **Audiobookshelf**: Self-hosted audiobook and podcast server.
-*   **Caddy**: Reverse proxy for Jellyfin and Audiobookshelf, with optional internal TLS.
+*   **Wizarr**: Invitation management for Jellyfin.
+*   **Caddy**: Reverse proxy for all services, with optional internal or wildcard TLS.
+*   **Monitoring**: Prometheus + Grafana + alerting, with per-host dashboards.
 *   **Configurable Media Paths**: Define root, music, video, and audiobook directories.
-*   **SAMBA File Sharing**: Enable file sharing over SMB (for managing media files)
-*   **OpenSSH**: Secure remote access.
+*   **SAMBA File Sharing**: Enable file sharing over SMB (for managing media files).
+*   **OpenSSH**: Secure remote access (key-only, password auth disabled by default).
 *   **Declarative Configuration**: Manage your media server infrastructure with Nix Flakes.
-*   **SOPS Nix**: Manage secrets securely with SOPS
+*   **SOPS Nix**: Manage secrets securely with SOPS.
+*   **Comin**: GitOps pull-based deployment — push to Git, hosts apply automatically.
+*   **Hardware transcoding**: Intel VA-API or NVIDIA NVENC/NVDEC for Jellyfin.
 
 ***
 
@@ -28,7 +32,7 @@ The core media server configuration lives in:
 You can customize its behavior using these options:
 
 *   `services.mediaServer.enable`  
-    Enable or disable the entire media server stack. *(Default: `true`)*
+    Enable or disable the entire media server stack. *(Default: `false` — must be explicitly enabled in each host's `default.nix`)*
 
 *   `services.mediaServer.domainBase`  
     Base domain for Caddy vhosts (e.g., `jellyfin.yourdomain.com`).  
@@ -101,10 +105,11 @@ Common settings (hostname, timezone, SSH keys) live in:
 3.  **Customize `flake.nix`**:  
     The flake auto-discovers hosts from `hosts/`.
 
-4.  **Build and deploy**:
+4.  **Build and deploy** (on the target NixOS machine):
     ```bash
-    nixos-rebuild switch --flake .#my-server
+    sudo nixos-rebuild switch --flake .#my-server
     ```
+    Or push to the `main` branch and let Comin deploy automatically.
 
 ***
 
@@ -398,7 +403,19 @@ git add -A && git commit -m "Add new-host to sops-nix" && git push
 
 ## One-Time Setup
 
-Create media directories manually:
+### SSH Keys
+
+SSH password authentication is disabled by default (`PasswordAuthentication = false`). Ensure your
+public key is listed in `modules/common.nix` under `users.users.admin.openssh.authorizedKeys.keys`
+before deploying to a new host.
+
+The `admin` user has an `initialPassword` set as a first-boot fallback (console login only).
+Change it immediately with `passwd admin` after first login, or remove it once key-based access
+is confirmed.
+
+### Media Directories
+
+Create media directories manually on each host:
 
 ```bash
 sudo mkdir -p /srv/media/{music,video,audiobooks}
@@ -471,24 +488,21 @@ sudo mount -t cifs //<hostname>/media /mnt/media \
 
 ## GitOps Deployment with Comin
 
-**Comin** is a pull-based deployment tool for NixOS. Each host runs a small agent that **polls your Git repo** and **automatically applies** the NixOS configuration associated with that machine (via flake outputs). It supports **testing branches per host**, **multi-remote polling**, and **safe deployments** you can roll back easily.  
-**References:** Comin README & docs (features, quick start, module options). [\[github.com\]](https://github.com/matt1432/nixos-jellyfin), [\[discourse.nixos.org\]](https://discourse.nixos.org/t/new-flake-for-managing-your-jellyfin-server-declaratively/65379)
+**Comin** is a pull-based deployment tool for NixOS. Each host runs a small agent that **polls your Git repo** and **automatically applies** the NixOS configuration associated with that machine (via flake outputs). It supports **testing branches per host**, **multi-remote polling**, and **safe deployments** you can roll back easily.
 
 ### Why use Comin here?
 
 *   **Hands-off deploys:** Push to Git; hosts pull and apply.
 *   **Reproducible:** Flakes pin inputs; every change is versioned.
 *   **Testing branches per host:** Trial changes on a sandbox, then promote.
-*   **Rollbacks:** NixOS generations remain available; roll back at boot or with `--rollback`.  
-    **References:** Comin announcement (pull-based design); NixOS rebuild behavior (switch/boot/test). [\[mynixos.com\]](https://mynixos.com/options/services.jellyfin), [\[nixos.wiki\]](https://nixos.wiki/wiki/Caddy)
+*   **Rollbacks:** NixOS generations remain available; roll back at boot or with `--rollback`.
 
 ***
 
 ### 1) Enable Comin on your host
 
-- Comin polls GitHub for a host's configuration (based on hostname) and automatically detects changes on the **`main`** branch
-- Comin will **switch** to the `main` branch build and activate it (depending on your Comin config).  
-**References:** Comin testing branch behavior; NixOS rebuild modes. [\[mynixos.com\]](https://mynixos.com/options/services.caddy), [\[nixos.wiki\]](https://nixos.wiki/wiki/Caddy)
+- Comin polls GitHub for a host's configuration (based on hostname) and automatically detects changes on the **`main`** branch (or `dev` for T29769).
+- Comin will **switch** to the matching branch build and activate it.
 
 ### 2) Testing workflow (per-host)
 
@@ -501,10 +515,9 @@ Use a **`testing-<hostname>`** branch to try changes on your sandbox host before
     git push origin testing-[hostname]
     ```
 
-2.  Comin on `[hostname]` detects `testing-[hostname]` and runs:
+2.      Comin on `[hostname]` detects `testing-[hostname]` and runs:
         nixos-rebuild test
-    (i.e., **`switch-to-configuration test`**). This **activates** the config without changing the bootloader.  
-    **Reference:** Comin "How to test a NixOS configuration change". [\[mynixos.com\]](https://mynixos.com/options/services.caddy)
+    (i.e., **`switch-to-configuration test`**). This **activates** the config without changing the bootloader.
 
 3.  Verify on the host:
     ```bash

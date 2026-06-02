@@ -128,11 +128,16 @@ in
       enable = true;
       settings = {
         server = {
-          http_addr = "0.0.0.0";
+          # Bind to loopback only — Caddy reverse-proxies external access.
+          # Binding to 0.0.0.0 would expose Grafana directly, bypassing Caddy auth.
+          http_addr = "127.0.0.1";
           http_port = 3000;
         };
         security = {
           admin_user = "admin";
+          # TODO: replace with a sops secret:
+          #   admin_password = "$__file{${config.sops.secrets.grafana_admin_password.path}}"
+          # Until then, change this immediately after first deploy via the Grafana UI.
           admin_password = "admin";
         };
       };
