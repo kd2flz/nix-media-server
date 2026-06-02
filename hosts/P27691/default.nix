@@ -62,6 +62,11 @@
     nanitor.enable        = true;
   };
 
+  services.ollamaServer = {
+    enable       = true;
+    acceleration = "cuda";
+  };
+
   # Monthly integrity check across both RAID1 SSDs
   services.btrfs.autoScrub = {
     enable      = true;

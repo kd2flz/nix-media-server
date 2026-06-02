@@ -79,6 +79,7 @@
             ./modules/common.nix
             ./modules/media-server.nix
             ./modules/monitoring.nix
+            ./modules/ollama.nix
             ./hosts/${host}/default.nix
             ./hosts/${host}/hardware.nix
 
