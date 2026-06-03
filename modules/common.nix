@@ -6,7 +6,7 @@
   services.openssh = {
     enable = true;
     settings = {
-      MaxAuthTries = 3;
+      MaxAuthTries = 15;
       PasswordAuthentication = false;
       PermitRootLogin = "no";
     };
