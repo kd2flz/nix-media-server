@@ -62,6 +62,12 @@
     nanitor.enable        = true;
   };
 
+  # Quadro P2200 is Pascal (SM 6.1). The nixpkgs default CUDA build targets
+  # sm_75+ (Turing and newer), so the llama runner crashes immediately on this
+  # card. Adding sm_61 here causes ollama-cuda to be recompiled with a kernel
+  # that runs on Pascal. This is a host-level concern, not a module option.
+  nixpkgs.config.cudaCapabilities = [ "6.1" "7.5" "8.0" "8.6" ];
+
   services.ollamaServer = {
     enable       = true;
     acceleration = "cuda";
