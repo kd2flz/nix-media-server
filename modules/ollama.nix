@@ -47,6 +47,16 @@ in
       default = true;
       description = "Open the firewall port for Ollama.";
     };
+
+    contextLength = lib.mkOption {
+      type = lib.types.int;
+      default = 131072;
+      description = ''
+        Default context window in tokens. Sets OLLAMA_CONTEXT_LENGTH.
+        phi4-mini supports 128K natively; this default gives headroom.
+        Lower if VRAM is constrained (e.g. 65536 for 8 GB GPU).
+      '';
+    };
   };
 
 
@@ -73,6 +83,9 @@ in
       loadModels = cfg.models;
       acceleration = cfg.acceleration;
     };
+
+    systemd.services.ollama.environment.OLLAMA_CONTEXT_LENGTH =
+      toString cfg.contextLength;
 
     networking.firewall.allowedTCPPorts =
       lib.mkIf cfg.openFirewall [ cfg.port ];
