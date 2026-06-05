@@ -50,11 +50,12 @@ in
 
     contextLength = lib.mkOption {
       type = lib.types.int;
-      default = 131072;
+      default = 65536;
       description = ''
         Default context window in tokens. Sets OLLAMA_CONTEXT_LENGTH.
-        phi4-mini supports 128K natively; this default gives headroom.
-        Lower if VRAM is constrained (e.g. 65536 for 8 GB GPU).
+        Must be >= 64K for Hermes' minimum check.  65536 fits gemma4
+        8B Q4_K_M (~4.7 GB) on a Quadro P2200 (5 GB VRAM) with headroom.
+        Increase to 131072 if you have more VRAM.
       '';
     };
   };
