@@ -3,7 +3,7 @@
   description = "Nix Media Server: reusable multi-site media server (Jellyfin + Audiobookshelf)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     comin = {
       url = "github:nlewo/comin";
