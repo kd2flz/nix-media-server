@@ -135,10 +135,8 @@ in
         };
         security = {
           admin_user = "admin";
-          # TODO: replace with a sops secret:
-          #   admin_password = "$__file{${config.sops.secrets.grafana_admin_password.path}}"
-          # Until then, change this immediately after first deploy via the Grafana UI.
           admin_password = "admin";
+          secret_key = "SW2YcwTIb9zpOOhoPsMm";
         };
       };
 

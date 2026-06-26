@@ -39,7 +39,16 @@ in
         GPU acceleration backend. null = CPU-only.
         "cuda"  → NVIDIA CUDA (requires hardware.nvidia to be configured).
         "rocm"  → AMD ROCm.
+
+        Deprecated in NixOS 26.05; use `package` instead.
       '';
+    };
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.ollama;
+      defaultText = lib.literalExpression "pkgs.ollama";
+      description = "Ollama package to use. Pick from pkgs.ollama, pkgs.ollama-cuda, pkgs.ollama-rocm, pkgs.ollama-vulkan.";
     };
 
     openFirewall = lib.mkOption {
@@ -66,6 +75,12 @@ in
   ########################################
   config = lib.mkIf cfg.enable {
 
+    warnings = lib.optional (cfg.acceleration != null) ''
+      services.ollamaServer.acceleration is deprecated in NixOS 26.05.
+      Use services.ollamaServer.package instead.
+      Setting package to pkgs.ollama-${cfg.acceleration} for compatibility.
+    '';
+
     # The nixpkgs ollama package runs a large Go test suite during build which
     # exhausts RAM and time on modest hardware. Override to skip checks — the
     # binary is still compiled in full; only the test runner is suppressed.
@@ -82,7 +97,11 @@ in
       host = cfg.host;
       port = cfg.port;
       loadModels = cfg.models;
-      acceleration = cfg.acceleration;
+      package = lib.mkDefault (
+        if cfg.acceleration == "cuda" then pkgs.ollama-cuda
+        else if cfg.acceleration == "rocm" then pkgs.ollama-rocm
+        else cfg.package
+      );
     };
 
     systemd.services.ollama.environment.OLLAMA_CONTEXT_LENGTH =
