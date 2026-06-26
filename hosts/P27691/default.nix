@@ -71,7 +71,7 @@
   services.ollamaServer = {
     enable       = true;
     acceleration = "cuda";
-    models       = [ "phi4-mini" "gemma4" ];
+    models       = [ "phi4-mini" "qwen3-coder" ];
   };
 
   # Monthly integrity check across both RAID1 SSDs
