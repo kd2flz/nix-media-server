@@ -197,7 +197,7 @@ in
       group = "audiobookshelf";
       host = "0.0.0.0";
       port = 13378;
-      openFirewall = false; # Caddy handles external access; direct port not exposed
+      openFirewall = true; # Caddy handles external access; direct port not exposed
     };
 
      ########################################
