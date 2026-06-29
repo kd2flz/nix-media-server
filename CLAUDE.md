@@ -108,3 +108,24 @@ The host can't decrypt until step 2 runs and the result is pushed.
 - Push to `dev` → T29769 only.
 - Push to `main` → all other hosts.
 - Use `Refs #<issue>` in commits to reference without closing. Only use `Closes #<issue>` when the user explicitly asks. Never close issues proactively.
+
+### Agent change workflow (mandatory)
+
+When the agent proposes a code change:
+
+1. **Ask first.** Do not comment on GitHub issues, close issues, or push code without the user's explicit approval.
+2. **Create a feature branch.** Name it `<initials>/<descriptive-slug>` (e.g. `dr/fix-audiobookshelf-cert-chain`). Work from the appropriate base branch (`dev` for sandbox, `main` for production).
+3. **Commit incrementally.** Commit each logical change individually to the feature branch. Use `Refs #<issue>` in commit messages when relevant.
+4. **Present for review.** Show the user all changes from the current session in a single review block:
+   - Branch name and base branch
+   - Prettified diff: pipe `git diff <base>...HEAD` through `diff-so-fancy` (available via `nix run nixpkgs#diff-so-fancy`)
+   - A bullet-point summary of what changed and why
+   - Ask explicitly for approval before proceeding
+5. **Squash before merge.** Once approved, rebase-edit history so all feature-branch commits are squashed into a single descriptive commit message. Then merge to the target branch.
+6. **Never push to the target branch directly.** Only merge your feature branch after review.
+
+## Common mistakes to avoid
+
+- **Do not "fix" problems that were already fixed.** Check `git log` and verify the current state of the file, not just the issue body. The issue body is a snapshot; the codebase may have already moved.
+- **Understand the architecture before touching firewall/networking.** Caddy reverse-proxies all web services on localhost. Opening firewall ports for a service is only needed for direct client connections, not for proxied access through Caddy on ports 80/443. The upstream NixOS service module's `openFirewall` option already handles port opening — do not duplicate it in the module's own `network.firewall.allowedTCPPorts`.
+- **Do not guess.** If the root cause is unclear, ask the user rather than making assumptions.
