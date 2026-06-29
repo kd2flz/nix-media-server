@@ -191,14 +191,14 @@ in
       extraGroups = [ "media" ]; # read access to /srv/media/*
     };
 
-    services.audiobookshelf = lib.mkIf cfg.audiobookshelf.enable {
-      enable = true;
-      user = "audiobookshelf";
-      group = "audiobookshelf";
-      host = "0.0.0.0";
-      port = 13378;
-      openFirewall = true; # Caddy handles external access; direct port not exposed
-    };
+     services.audiobookshelf = lib.mkIf cfg.audiobookshelf.enable {
+       enable = true;
+       user = "audiobookshelf";
+       group = "audiobookshelf";
+       host = "0.0.0.0";
+       port = 13378;
+       openFirewall = true; # Required for both Caddy access and direct client connections
+     };
 
      ########################################
      # Samba (optional)
@@ -364,6 +364,7 @@ services.caddy = let
       # Always open HTTP/HTTPS for Caddy.
       # Only open service-specific ports when those services are enabled.
       allowedTCPPorts = [ 80 443 ]
+        ++ lib.optionals cfg.audiobookshelf.enable [ 13378 ]
         ++ lib.optionals cfg.wizarr.enable [ 5690 ]
         ++ lib.optionals config.services.monitoring.enable [ 3000 9001 ];
     };
