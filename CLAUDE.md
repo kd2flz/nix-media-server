@@ -95,6 +95,67 @@ It is imported per-host (not globally), currently only by `hosts/T29769/default.
 
 The host can't decrypt until step 2 runs and the result is pushed.
 
+### Adding or replacing a wildcard TLS certificate (PKCS#12)
+
+The module supports two TLS modes for Caddy vhosts, set via `services.mediaServer.tlsMode`:
+- `"internal"` (default) — Caddy's internal CA, self-signed. Fine for LAN/`.community.int` domains.
+- `"none"` — plain HTTP (no encryption).
+
+For public-facing hosts, use a **wildcard PKCS#12 cert** stored in sops. The module auto-extracts PEM cert+key at boot via the `extract-media-tls` activation script.
+
+**To add a new cert for a host:**
+
+1. **Get a wildcard cert** from your CA in PKCS#12 (`.p12`) format covering `*.your-domain.com`. **Critical: the wildcard (`*.domain.com`) must be in the Subject Alternative Name (SAN), not just the Common Name (CN).** Modern browsers and Android exclusively check the SAN and ignore the CN — a cert with `*.media-bel.ccistack.com` only in the CN will fail for all subdomains. Request both of these in the SAN:
+   - `DNS:*.media-bel.ccistack.com`
+   - `DNS:media-bel.ccistack.com` (root domain, for direct access)
+2. **Base64-encode it:**
+   ```bash
+   base64 -w0 /path/to/cert.p12 > /tmp/cert_b64.txt
+   ```
+3. **Add sops secret definitions** in the host's `hosts/<name>/default.nix`:
+   ```nix
+   sops.secrets.media_tls_pk12 = {
+     mode = "0440";
+     owner = "root";
+     group = "root";
+   };
+   sops.secrets.media_tls_pk12_pass = {
+     mode = "0440";
+     owner = "root";
+     group = "root";
+   };
+   ```
+4. **Wire the secrets** to the module options:
+   ```nix
+   tls.pkcs12File = config.sops.secrets.media_tls_pk12.path;
+   tls.pkcs12PasswordFile = config.sops.secrets.media_tls_pk12_pass.path;
+   ```
+5. **Store the cert in sops** (run inside `nix develop`):
+   ```bash
+   sops --set '["media_tls_pk12"]' "$(cat /tmp/cert_b64.txt | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')" secrets/secrets.yaml
+   ```
+6. **Store the password** the same way (never commit it in plaintext):
+   ```bash
+   sops --set '["media_tls_pk12_pass"]' '"your-password"' secrets/secrets.yaml
+   ```
+
+**Secret naming convention:** Use `media_tls_pk12` for the base64-encoded cert and `media_tls_pk12_pass` for its password. These names are shared across all hosts in the same `secrets.yaml`; sops encrypts for all recipients listed in `.sops.yaml`.
+
+**To verify extraction works locally:**
+```bash
+nix develop --command bash -c '
+  b64=$(sops decrypt secrets/secrets.yaml 2>/dev/null | grep "^media_tls_pk12:" | sed "s/^media_tls_pk12: //")
+  echo "$b64" | base64 -d > /tmp/test_cert.p12
+  openssl pkcs12 -in /tmp/test_cert.p12 -passin pass:your-password -nokeys -out /tmp/test_cert.pem
+  openssl x509 -in /tmp/test_cert.pem -noout -subject -dates
+  echo "--- SAN ---"
+  openssl x509 -in /tmp/test_cert.pem -noout -ext subjectAltName
+'
+```
+Verify the SAN contains `DNS:*.your-domain.com` — if it's missing, the cert will fail for subdomains on Android and modern browsers.
+
+**To deploy:** Commit, push to the appropriate branch (see Git workflow), and comin auto-deploys. On the host, the `extract-media-tls` activation script runs before systemd starts and places the cert at `/var/lib/caddy/tls/cert.pem` and key at `/var/lib/caddy/tls/key.pem`. Caddy picks them up automatically.
+
 ## Conventions worth knowing
 
 - New module options go under `services.mediaServer.<name>.enable` (and friends) in `modules/media-server.nix`, then implementation in the same file's `config` block. Don't create one-module-per-service unless it's substantial — the existing module is intentionally a single grab-bag.
@@ -108,3 +169,24 @@ The host can't decrypt until step 2 runs and the result is pushed.
 - Push to `dev` → T29769 only.
 - Push to `main` → all other hosts.
 - Use `Refs #<issue>` in commits to reference without closing. Only use `Closes #<issue>` when the user explicitly asks. Never close issues proactively.
+
+### Agent change workflow (mandatory)
+
+When the agent proposes a code change:
+
+1. **Ask first.** Do not comment on GitHub issues, close issues, or push code without the user's explicit approval.
+2. **Branch before editing.** Before making any file changes, create a feature branch named `<initials>/<descriptive-slug>` (e.g. `dr/fix-audiobookshelf-cert-chain`). Work from the appropriate base branch (`dev` for sandbox, `main` for production).
+3. **Commit incrementally.** Commit each logical change individually to the feature branch. Use `Refs #<issue>` in commit messages when relevant. Never include secrets or passwords in plaintext in commit history.
+4. **Present for review.** When the user asks to push, that triggers the review and merge process. Show the user all changes from the current session in a single review block:
+   - Branch name and base branch
+   - Prettified diff: pipe `git diff <base>...HEAD` through `diff-so-fancy` (available via `nix run nixpkgs#diff-so-fancy`)
+   - A bullet-point summary of what changed and why
+   - Ask explicitly for approval before proceeding
+5. **Squash before merge.** Once approved, rebase-edit history so all feature-branch commits are squashed into a single descriptive commit message. Then merge to the target branch.
+6. **Never push to the target branch directly.** Only merge your feature branch after review.
+
+## Common mistakes to avoid
+
+- **Do not "fix" problems that were already fixed.** Check `git log` and verify the current state of the file, not just the issue body. The issue body is a snapshot; the codebase may have already moved.
+- **Understand the architecture before touching firewall/networking.** Caddy reverse-proxies all web services on localhost. Opening firewall ports for a service is only needed for direct client connections, not for proxied access through Caddy on ports 80/443. The upstream NixOS service module's `openFirewall` option already handles port opening — do not duplicate it in the module's own `network.firewall.allowedTCPPorts`.
+- **Do not guess.** If the root cause is unclear, ask the user rather than making assumptions.
