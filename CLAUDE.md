@@ -105,7 +105,9 @@ For public-facing hosts, use a **wildcard PKCS#12 cert** stored in sops. The mod
 
 **To add a new cert for a host:**
 
-1. **Get a wildcard cert** from your CA in PKCS#12 (`.p12`) format covering `*.your-domain.com`.
+1. **Get a wildcard cert** from your CA in PKCS#12 (`.p12`) format covering `*.your-domain.com`. **Critical: the wildcard (`*.domain.com`) must be in the Subject Alternative Name (SAN), not just the Common Name (CN).** Modern browsers and Android exclusively check the SAN and ignore the CN — a cert with `*.media-bel.ccistack.com` only in the CN will fail for all subdomains. Request both of these in the SAN:
+   - `DNS:*.media-bel.ccistack.com`
+   - `DNS:media-bel.ccistack.com` (root domain, for direct access)
 2. **Base64-encode it:**
    ```bash
    base64 -w0 /path/to/cert.p12 > /tmp/cert_b64.txt
@@ -146,8 +148,11 @@ nix develop --command bash -c '
   echo "$b64" | base64 -d > /tmp/test_cert.p12
   openssl pkcs12 -in /tmp/test_cert.p12 -passin pass:your-password -nokeys -out /tmp/test_cert.pem
   openssl x509 -in /tmp/test_cert.pem -noout -subject -dates
+  echo "--- SAN ---"
+  openssl x509 -in /tmp/test_cert.pem -noout -ext subjectAltName
 '
 ```
+Verify the SAN contains `DNS:*.your-domain.com` — if it's missing, the cert will fail for subdomains on Android and modern browsers.
 
 **To deploy:** Commit, push to the appropriate branch (see Git workflow), and comin auto-deploys. On the host, the `extract-media-tls` activation script runs before systemd starts and places the cert at `/var/lib/caddy/tls/cert.pem` and key at `/var/lib/caddy/tls/key.pem`. Caddy picks them up automatically.
 
