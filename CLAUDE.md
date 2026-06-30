@@ -114,9 +114,9 @@ The host can't decrypt until step 2 runs and the result is pushed.
 When the agent proposes a code change:
 
 1. **Ask first.** Do not comment on GitHub issues, close issues, or push code without the user's explicit approval.
-2. **Create a feature branch.** Name it `<initials>/<descriptive-slug>` (e.g. `dr/fix-audiobookshelf-cert-chain`). Work from the appropriate base branch (`dev` for sandbox, `main` for production).
-3. **Commit incrementally.** Commit each logical change individually to the feature branch. Use `Refs #<issue>` in commit messages when relevant.
-4. **Present for review.** Show the user all changes from the current session in a single review block:
+2. **Branch before editing.** Before making any file changes, create a feature branch named `<initials>/<descriptive-slug>` (e.g. `dr/fix-audiobookshelf-cert-chain`). Work from the appropriate base branch (`dev` for sandbox, `main` for production).
+3. **Commit incrementally.** Commit each logical change individually to the feature branch. Use `Refs #<issue>` in commit messages when relevant. Never include secrets or passwords in plaintext in commit history.
+4. **Present for review.** When the user asks to push, that triggers the review and merge process. Show the user all changes from the current session in a single review block:
    - Branch name and base branch
    - Prettified diff: pipe `git diff <base>...HEAD` through `diff-so-fancy` (available via `nix run nixpkgs#diff-so-fancy`)
    - A bullet-point summary of what changed and why
