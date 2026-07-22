@@ -164,6 +164,87 @@ Verify the SAN contains `DNS:*.your-domain.com` — if it's missing, the cert wi
 - Grafana binds to `127.0.0.1:3000` (loopback only); Caddy proxies it externally. The default `admin_password` is a placeholder — change it via the Grafana UI or wire it to a sops secret.
 - Media directories (`/srv/media/{music,video,audiobooks}`) are created manually one-time per host (see README), not by tmpfiles.
 
+## Adding a new host (step-by-step)
+
+### 1. Prepare the host
+
+- Install NixOS, ensure SSH host key exists at `/etc/ssh/ssh_host_ed25519_key`
+- Run `nixos-generate-config` on the host and capture `hardware-configuration.nix`
+- Get the host's age key: `sudo cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age`
+- If using BTRFS media RAID: format drives (`mkfs.btrfs -L media -m raid1 -d raid1 ...`), note the UUID from `blkid`
+
+### 2. Create host files
+
+Create `hosts/<hostname>/` with two files:
+
+**`hardware.nix`** — paste the `nixos-generate-config` output. Add `/srv/media` if using BTRFS RAID:
+```nix
+fileSystems."/srv/media" =
+  { device = "UUID=<btrfs-uuid>";
+    fsType = "btrfs";
+    options = [ "compress=zstd" "autodefrag" "nofail" ];
+  };
+```
+
+**`default.nix`** — set these options:
+```nix
+networking.hostName = "<hostname>";       # must match directory name
+time.timeZone = "America/New_York";
+boot.loader.systemd-boot.enable = true;   # or grub for legacy BIOS
+sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+services.monitoring.enable = true;
+services.mediaServer = {
+  enable = true;
+  domainBase = "<domain>";                # e.g. "media-hws.ccistack.com"
+  tlsMode = "internal";
+  gpu = "intel";                          # or "nvidia" or "none"
+  paths = { root = "/srv/media"; ... };
+  audiobookshelf.enable = true;
+  jellyfin.enable = true;
+  wizarr.enable = true;
+  nanitor.enable = true;
+};
+```
+
+For NVIDIA GPUs, add `cudaCapabilities` (match existing hosts or run `nix-smi --query-gpu=compute_cap`).
+For wildcard TLS, add `sops.secrets.media_tls_pk12` and wire to `tls.pkcs12File`/`tls.pkcs12PasswordFile`.
+
+### 3. Register the host's age key
+
+Append to `.sops.yaml`:
+```yaml
+keys:
+    - &<hostname> <age-key>
+creation_rules:
+    - path_regex: secrets/[^/]+\.yaml$
+      key_groups:
+          - age:
+                - *<hostname>
+```
+
+Re-encrypt secrets: `sops updatekeys secrets/secrets.yaml` (inside `nix develop`)
+
+### 4. On the host, create mount points
+
+```bash
+sudo mkdir -p /srv/media /nix /home /boot
+```
+
+NixOS mounts existing BTRFS subvolumes/partitions at these paths — it does not create them.
+
+### 5. DNS
+
+Add a CNAME: `<domain-base>` → `<hostname>` (pointing to the host's IP).
+
+### 6. Deploy
+
+Push to the appropriate branch (`main` for production, `dev` for T29769 sandbox). Comin auto-deploys.
+
+### 7. Verify
+
+- `nix flake show` — confirm the new host appears in `nixosConfigurations`
+- On the host: `mount | grep /srv/media` and `btrfs filesystem usage /srv/media`
+
 ## Git workflow
 
 - Push to `dev` → T29769 only.
