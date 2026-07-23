@@ -61,6 +61,10 @@
 
   nixpkgs.config.cudaCapabilities = [ "6.1" "7.5" "8.0" "8.6" ];
 
+  # Quadro P2000 (Pascal, SM 6.1) requires the 580.xx legacy driver.
+  # The default 595.xx driver dropped support for this GPU.
+  hardware.nvidia.package = lib.mkForce config.boot.kernelPackages.nvidiaPackages.legacy_580;
+
   # Monthly integrity check across both BTRFS RAID1 disks
   services.btrfs.autoScrub = {
     enable      = true;
