@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-NixOS flake that builds and deploys multi-site media servers (Jellyfin, Audiobookshelf, Wizarr, Caddy, monitoring stack). Hosts pull and apply their own config via **Comin** (GitOps). There is no central deploy pipeline — pushing to the right branch *is* the deploy.
+NixOS flake that builds and deploys multi-site media servers (Jellyfin or Emby, Audiobookshelf, Wizarr, Caddy, monitoring stack). Hosts pull and apply their own config via **Comin** (GitOps). There is no central deploy pipeline — pushing to the right branch *is* the deploy.
 
 ## Common commands
 
@@ -41,7 +41,7 @@ sudo comin eval
 
 Every host gets the same module stack injected automatically:
 - `modules/common.nix` — SSH (key-only, no password auth), admin user, Nix GC, Podman, GNOME, `stateVersion`
-- `modules/media-server.nix` — the `services.mediaServer.*` option tree (Jellyfin, Audiobookshelf, Wizarr, Samba, Caddy, Nanitor)
+- `modules/media-server.nix` — the `services.mediaServer.*` option tree (Jellyfin/Emby, Audiobookshelf, Wizarr, Samba, Caddy, Nanitor)
 - `modules/monitoring.nix` — `services.monitoring.*` (Prometheus + Grafana + exporters + alert rules)
 - `sops-nix` module with `sops.defaultSopsFile` pre-pointed at `secrets/secrets.yaml`
 - `comin` module
@@ -66,7 +66,7 @@ Per-host testing branches (`testing-<hostname>`) are also supported by Comin and
 `services.mediaServer.gpu` (enum: `"intel"` / `"nvidia"` / `"none"`, default `"intel"`) is the single knob for hardware transcoding. Setting it:
 
 - **`"intel"`** — adds `intel-media-driver` to `hardware.graphics.extraPackages` (VA-API)
-- **`"nvidia"`** — loads the proprietary NVIDIA driver via `services.xserver.videoDrivers`, enables modesetting, and adds the Jellyfin service user to the `video` and `render` groups (required for `/dev/dri` and `/dev/nvidia*` access). All NVIDIA `hardware.nvidia.*` options are set in the module; hosts only need to set the option. For pre-Pascal GPUs (GTX 900 or older), override `hardware.nvidia.package` to `nvidiaPackages.legacy_470` in the host's `default.nix`.
+- **`"nvidia"`** — loads the proprietary NVIDIA driver via `services.xserver.videoDrivers`, enables modesetting, and adds the Jellyfin/Emby service user to the `video` and `render` groups (required for `/dev/dri` and `/dev/nvidia*` access). All NVIDIA `hardware.nvidia.*` options are set in the module; hosts only need to set the option. For pre-Pascal GPUs (GTX 900 or older), override `hardware.nvidia.package` to `nvidiaPackages.legacy_470` in the host's `default.nix`.
 - **`"none"`** — software transcode only
 
 ### BTRFS RAID1 for media storage
@@ -200,7 +200,8 @@ services.mediaServer = {
   gpu = "intel";                          # or "nvidia" or "none"
   paths = { root = "/srv/media"; ... };
   audiobookshelf.enable = true;
-  jellyfin.enable = true;
+  jellyfin.enable = true;                 # or set to false and use emby.enable = true
+  emby.enable = false;                    # set to true to use Emby instead of Jellyfin
   wizarr.enable = true;
   nanitor.enable = true;
 };
