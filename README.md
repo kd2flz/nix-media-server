@@ -4,6 +4,9 @@ This project provides a reusable, multi-site media server configuration using **
 
 Adding a new host? See the [Adding a new Host](#Adding-a-New-Host).
 
+## AI Disclaimer
+This project was created with lots of help from AI.
+
 ***
 
 ## Features
