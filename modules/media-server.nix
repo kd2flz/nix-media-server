@@ -55,6 +55,13 @@ in
       default = true;
       description = "Enable Jellyfin Module.";
     };
+
+    emby.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable Emby media server (alternative to Jellyfin).";
+    };
+
     wizarr.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -146,6 +153,16 @@ in
   config = lib.mkIf cfg.enable {
 
     ########################################
+    # Assertions
+    ########################################
+    assertions = [
+      {
+        assertion = !(cfg.jellyfin.enable && cfg.emby.enable);
+        message = "services.mediaServer.jellyfin.enable and services.mediaServer.emby.enable cannot both be true. Choose one media server.";
+      }
+    ];
+
+    ########################################
     # Groups / base identity
     ########################################
     users.groups.media = { };
@@ -179,6 +196,43 @@ in
     environment.systemPackages = with pkgs;
       (lib.optionals cfg.jellyfin.enable [ jellyfin-ffmpeg fastfetch ])
       ++ (lib.optionals (cfg.gpu == "nvidia") [ pkgs.nvtopPackages.nvidia ]);
+
+    ########################################
+    # Emby (Container-based, alternative to Jellyfin)
+    ########################################
+    users.groups.emby = lib.mkIf cfg.emby.enable { };
+
+    users.users.emby = lib.mkIf cfg.emby.enable {
+      isSystemUser = true;
+      group = "emby";
+      extraGroups = [ "media" ] ++ lib.optionals (cfg.gpu == "nvidia") [ "video" "render" ];
+    };
+
+    # Emby container with GPU passthrough for hardware transcoding
+    virtualisation.oci-containers.containers.emby = lib.mkIf cfg.emby.enable {
+      image = "ghcr.io/emby/embyserver:latest";
+
+      volumes = [
+        "/var/emby/config:/config"
+        "${cfg.paths.root}:/mnt/media"
+      ];
+
+      environment = {
+        UID = "994";
+        GID = "994";
+        TZ = config.time.timeZone or "UTC";
+      };
+
+      extraOptions = [
+        "--name=emby"
+        "--network=host"
+      ] ++ lib.optionals (cfg.gpu == "nvidia") [
+        "--gpus=all"
+        "--device=/dev/dri:/dev/dri"
+      ] ++ lib.optionals (cfg.gpu == "intel") [
+        "--device=/dev/dri:/dev/dri"
+      ];
+    };
 
     ########################################
     # Audiobookshelf (Native NixOS service)
@@ -238,9 +292,15 @@ in
         home = "/var/wizarr";
       };
 
-      # Persistent data directory
-      systemd.tmpfiles.rules = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) [
-        "d /var/wizarr 0755 wizarr wizarr - -"
+      # Persistent data directories for Wizarr and Emby
+      systemd.tmpfiles.rules = lib.mkMerge [
+        (lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) [
+          "d /var/wizarr 0755 wizarr wizarr - -"
+        ])
+        (lib.mkIf cfg.emby.enable [
+          "d /var/emby 0770 emby emby - -"
+          "d /var/emby/config 0770 emby emby - -"
+        ])
       ];
 
       virtualisation.oci-containers.containers.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) {
@@ -332,6 +392,11 @@ services.caddy = let
       extraConfig = ''
         ${lib.optionalString cfg.jellyfin.enable ''
         jellyfin.${cfg.domainBase} {
+          ${tlsLine}
+          reverse_proxy 127.0.0.1:8096
+        }''}
+        ${lib.optionalString cfg.emby.enable ''
+        emby.${cfg.domainBase} {
           ${tlsLine}
           reverse_proxy 127.0.0.1:8096
         }''}

@@ -53,7 +53,8 @@
     };
 
     audiobookshelf.enable = true;
-    jellyfin.enable       = true;
+    jellyfin.enable       = false;
+    emby.enable           = true;
     wizarr.enable         = true;
     samba.enable          = true;
     nanitor.enable        = true;
