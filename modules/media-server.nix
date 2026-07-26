@@ -178,9 +178,9 @@ in
       extraGroups = [ "media" ] ++ lib.optionals (cfg.gpu == "nvidia") [ "video" "render" ];
     };
 
-    services.jellyfin = lib.mkIf cfg.jellyfin.enable {
-      enable = true;
-      openFirewall = true;
+    services.jellyfin = {
+      enable = lib.mkDefault cfg.jellyfin.enable;
+      openFirewall = lib.mkDefault cfg.jellyfin.enable;
     };
 
     # Enable Jellyfin's Prometheus metrics endpoint by flipping <EnableMetrics> in system.xml.
@@ -245,23 +245,23 @@ in
       extraGroups = [ "media" ]; # read access to /srv/media/*
     };
 
-    services.audiobookshelf = lib.mkIf cfg.audiobookshelf.enable {
-      enable = true;
+    services.audiobookshelf = {
+      enable = lib.mkDefault cfg.audiobookshelf.enable;
       user = "audiobookshelf";
       group = "audiobookshelf";
       host = "0.0.0.0";
       port = 13378;
-      openFirewall = true; # Caddy handles external access; direct port not exposed
+      openFirewall = lib.mkDefault cfg.audiobookshelf.enable;
     };
 
      ########################################
      # Samba (optional)
      # ######################################
 
-     services.samba = lib.mkIf cfg.samba.enable {
-       enable = true;
+     services.samba = {
+       enable = lib.mkDefault cfg.samba.enable;
        package = pkgs.samba4Full;
-       openFirewall = true;
+       openFirewall = lib.mkDefault cfg.samba.enable;
 
        settings = {
          global = {
