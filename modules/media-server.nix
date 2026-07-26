@@ -178,10 +178,15 @@ in
       extraGroups = [ "media" ] ++ lib.optionals (cfg.gpu == "nvidia") [ "video" "render" ];
     };
 
-    services.jellyfin = {
-      enable = lib.mkDefault cfg.jellyfin.enable;
-      openFirewall = lib.mkDefault cfg.jellyfin.enable;
-    };
+    services.jellyfin = lib.mkMerge [
+      (lib.mkIf (!cfg.jellyfin.enable) {
+        enable = false;
+      })
+      (lib.mkIf cfg.jellyfin.enable {
+        enable = true;
+        openFirewall = true;
+      })
+    ];
 
     # Enable Jellyfin's Prometheus metrics endpoint by flipping <EnableMetrics> in system.xml.
     # On first start the file doesn't exist yet, so guard with -f; metrics get enabled on the
@@ -245,23 +250,32 @@ in
       extraGroups = [ "media" ]; # read access to /srv/media/*
     };
 
-    services.audiobookshelf = {
-      enable = lib.mkDefault cfg.audiobookshelf.enable;
-      user = "audiobookshelf";
-      group = "audiobookshelf";
-      host = "0.0.0.0";
-      port = 13378;
-      openFirewall = lib.mkDefault cfg.audiobookshelf.enable;
-    };
+    services.audiobookshelf = lib.mkMerge [
+      (lib.mkIf (!cfg.audiobookshelf.enable) {
+        enable = false;
+      })
+      (lib.mkIf cfg.audiobookshelf.enable {
+        enable = true;
+        user = "audiobookshelf";
+        group = "audiobookshelf";
+        host = "0.0.0.0";
+        port = 13378;
+        openFirewall = true;
+      })
+    ];
 
      ########################################
      # Samba (optional)
      # ######################################
 
-     services.samba = {
-       enable = lib.mkDefault cfg.samba.enable;
-       package = pkgs.samba4Full;
-       openFirewall = lib.mkDefault cfg.samba.enable;
+     services.samba = lib.mkMerge [
+       (lib.mkIf (!cfg.samba.enable) {
+         enable = false;
+       })
+       (lib.mkIf cfg.samba.enable {
+         enable = true;
+         package = pkgs.samba4Full;
+         openFirewall = true;
 
        settings = {
          global = {
@@ -276,9 +290,10 @@ in
            writable   = "yes";
            comment    = "Media Directory";
            browseable = "yes";
-         };
-       };
-     };
+          };
+        };
+       })
+    ];
 
 
       ########################################
