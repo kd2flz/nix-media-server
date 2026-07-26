@@ -215,7 +215,7 @@ in
 
     # Emby container with GPU passthrough for hardware transcoding
     virtualisation.oci-containers.containers.emby = lib.mkIf cfg.emby.enable {
-      image = "ghcr.io/emby/embyserver:latest";
+      image = "emby/embyserver:latest";
 
       volumes = [
         "/var/emby/config:/config"
