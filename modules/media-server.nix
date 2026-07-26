@@ -223,8 +223,8 @@ in
       ];
 
       environment = {
-        UID = "994";
-        GID = "994";
+        UID = "984";
+        GID = "976";
         TZ = config.time.timeZone or "UTC";
       };
 
