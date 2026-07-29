@@ -470,6 +470,7 @@ services.caddy = let
     hardware.nvidia.powerManagement.enable = lib.mkIf (cfg.gpu == "nvidia") false;
     hardware.nvidia.nvidiaSettings = lib.mkIf (cfg.gpu == "nvidia") false;
     hardware.nvidia.package = lib.mkIf (cfg.gpu == "nvidia") config.boot.kernelPackages.nvidiaPackages.stable;
+    hardware.nvidia-container-toolkit.enable = lib.mkIf (cfg.gpu == "nvidia") (lib.mkDefault true);
 
     ########################################
     # TLS: PKCS#12 → PEM extraction (activation, before systemd)
