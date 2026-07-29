@@ -1,14 +1,18 @@
 # Nix Media Server
 
-This project provides a reusable, multi-site media server configuration using **NixOS**, featuring **Jellyfin**, **Audiobookshelf**, and **Caddy**.
+This project provides a reusable, multi-site media server configuration using **NixOS**, featuring **Jellyfin** (or **Emby** as an alternative), **Audiobookshelf**, and **Caddy**.
 
 Adding a new host? See the [Adding a new Host](#Adding-a-New-Host).
+
+## AI Disclaimer
+This project was created with lots of help from AI.
 
 ***
 
 ## Features
 
 *   **Jellyfin**: Free and open-source media system for managing and streaming video and music.
+*   **Emby**: Alternative media server (container-based, use instead of Jellyfin).
 *   **Audiobookshelf**: Self-hosted audiobook and podcast server.
 *   **Wizarr**: Invitation management for Jellyfin.
 *   **Caddy**: Reverse proxy for all services, with optional internal or wildcard TLS.
@@ -68,6 +72,9 @@ You can customize its behavior using these options:
 
 *   `services.mediaServer.jellyfin.enable`  
     Enable or disable Jellyfin service. *(Default: `true`)*
+
+*   `services.mediaServer.emby.enable`  
+    Enable or disable Emby media server (alternative to Jellyfin). *(Default: `false`)*
 
 ***
 
@@ -234,10 +241,11 @@ sudo nixos-rebuild switch --flake .#new-hostname
        enable     = true;
        domainBase = "<hostname>.yourdomain.com";
        tlsMode    = "internal";
-       gpu        = "intel";     # or "nvidia" or "none"
-       audiobookshelf.enable = true;
-       jellyfin.enable       = true;
-       wizarr.enable         = true;
+        gpu        = "intel";     # or "nvidia" or "none"
+        audiobookshelf.enable = true;
+        jellyfin.enable       = true;  # or set to false and use emby.enable = true
+        emby.enable           = false; # set to true to use Emby instead of Jellyfin
+        wizarr.enable         = true;
        samba.enable          = true;
        nanitor.enable        = true;
      };
@@ -251,7 +259,7 @@ sudo nixos-rebuild switch --flake .#new-hostname
 
 4. **Configure the GPU** (set `services.mediaServer.gpu`):
    - `"intel"` — adds `intel-media-driver` for VA-API (most workstations/servers)
-   - `"nvidia"` — loads the proprietary NVIDIA driver and wires NVENC/NVDEC permissions for Jellyfin. Use `hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_470` in `default.nix` for pre-Pascal (GTX 900 or older) cards.
+   - `"nvidia"` — loads the proprietary NVIDIA driver and wires NVENC/NVDEC permissions for Jellyfin/Emby. Use `hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_470` in `default.nix` for pre-Pascal (GTX 900 or older) cards.
    - `"none"` — software transcoding only
 
 5. **Set up BTRFS RAID1 media storage** (if using two drives for redundancy):

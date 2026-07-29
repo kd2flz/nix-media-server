@@ -55,6 +55,13 @@ in
       default = true;
       description = "Enable Jellyfin Module.";
     };
+
+    emby.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable Emby media server (alternative to Jellyfin).";
+    };
+
     wizarr.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -146,6 +153,16 @@ in
   config = lib.mkIf cfg.enable {
 
     ########################################
+    # Assertions
+    ########################################
+    assertions = [
+      {
+        assertion = !(cfg.jellyfin.enable && cfg.emby.enable);
+        message = "services.mediaServer.jellyfin.enable and services.mediaServer.emby.enable cannot both be true. Choose one media server.";
+      }
+    ];
+
+    ########################################
     # Groups / base identity
     ########################################
     users.groups.media = { };
@@ -161,24 +178,68 @@ in
       extraGroups = [ "media" ] ++ lib.optionals (cfg.gpu == "nvidia") [ "video" "render" ];
     };
 
-    services.jellyfin = lib.mkIf cfg.jellyfin.enable {
-      enable = true;
-      openFirewall = true;
-    };
+    services.jellyfin = lib.mkMerge [
+      (lib.mkIf (!cfg.jellyfin.enable) {
+        enable = false;
+      })
+      (lib.mkIf cfg.jellyfin.enable {
+        enable = true;
+        openFirewall = true;
+      })
+    ];
 
     # Enable Jellyfin's Prometheus metrics endpoint by flipping <EnableMetrics> in system.xml.
     # On first start the file doesn't exist yet, so guard with -f; metrics get enabled on the
     # next restart after Jellyfin generates its config.
-    systemd.services.jellyfin.preStart = lib.mkIf cfg.jellyfin.enable ''
-      if [ -f /var/lib/jellyfin/config/system.xml ]; then
-        ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
-      fi
-    '';
+    systemd.services.jellyfin = lib.mkIf cfg.jellyfin.enable {
+      preStart = ''
+        if [ -f /var/lib/jellyfin/config/system.xml ]; then
+          ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
+        fi
+      '';
+    };
 
     # Optional: provide the ffmpeg build Jellyfin expects
     environment.systemPackages = with pkgs;
       (lib.optionals cfg.jellyfin.enable [ jellyfin-ffmpeg fastfetch ])
       ++ (lib.optionals (cfg.gpu == "nvidia") [ pkgs.nvtopPackages.nvidia ]);
+
+    ########################################
+    # Emby (Container-based, alternative to Jellyfin)
+    ########################################
+    users.groups.emby = lib.mkIf cfg.emby.enable { };
+
+    users.users.emby = lib.mkIf cfg.emby.enable {
+      isSystemUser = true;
+      group = "emby";
+      extraGroups = [ "media" ] ++ lib.optionals (cfg.gpu == "nvidia") [ "video" "render" ];
+    };
+
+    # Emby container with GPU passthrough for hardware transcoding
+    virtualisation.oci-containers.containers.emby = lib.mkIf cfg.emby.enable {
+      image = "emby/embyserver:latest";
+
+      volumes = [
+        "/var/emby/config:/config"
+        "${cfg.paths.root}:/mnt/media"
+      ];
+
+      environment = {
+        UID = "984";
+        GID = "976";
+        TZ = config.time.timeZone or "UTC";
+      };
+
+      extraOptions = [
+        "--name=emby"
+        "--network=host"
+      ] ++ lib.optionals (cfg.gpu == "nvidia") [
+        "--gpus=all"
+        "--device=/dev/dri:/dev/dri"
+      ] ++ lib.optionals (cfg.gpu == "intel") [
+        "--device=/dev/dri:/dev/dri"
+      ];
+    };
 
     ########################################
     # Audiobookshelf (Native NixOS service)
@@ -191,23 +252,32 @@ in
       extraGroups = [ "media" ]; # read access to /srv/media/*
     };
 
-    services.audiobookshelf = lib.mkIf cfg.audiobookshelf.enable {
-      enable = true;
-      user = "audiobookshelf";
-      group = "audiobookshelf";
-      host = "0.0.0.0";
-      port = 13378;
-      openFirewall = true; # Caddy handles external access; direct port not exposed
-    };
+    services.audiobookshelf = lib.mkMerge [
+      (lib.mkIf (!cfg.audiobookshelf.enable) {
+        enable = false;
+      })
+      (lib.mkIf cfg.audiobookshelf.enable {
+        enable = true;
+        user = "audiobookshelf";
+        group = "audiobookshelf";
+        host = "0.0.0.0";
+        port = 13378;
+        openFirewall = true;
+      })
+    ];
 
      ########################################
      # Samba (optional)
      # ######################################
 
-     services.samba = lib.mkIf cfg.samba.enable {
-       enable = true;
-       package = pkgs.samba4Full;
-       openFirewall = true;
+     services.samba = lib.mkMerge [
+       (lib.mkIf (!cfg.samba.enable) {
+         enable = false;
+       })
+       (lib.mkIf cfg.samba.enable {
+         enable = true;
+         package = pkgs.samba4Full;
+         openFirewall = true;
 
        settings = {
          global = {
@@ -222,9 +292,10 @@ in
            writable   = "yes";
            comment    = "Media Directory";
            browseable = "yes";
-         };
-       };
-     };
+          };
+        };
+       })
+    ];
 
 
       ########################################
@@ -238,9 +309,21 @@ in
         home = "/var/wizarr";
       };
 
-      # Persistent data directory
-      systemd.tmpfiles.rules = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) [
-        "d /var/wizarr 0755 wizarr wizarr - -"
+      # Persistent data directories for Wizarr and Emby
+      systemd.tmpfiles.rules = lib.mkMerge [
+        [
+          "d ${cfg.paths.root} 0775 root media - -"
+          "d ${cfg.paths.music} 0775 root media - -"
+          "d ${cfg.paths.video} 0775 root media - -"
+          "d ${cfg.paths.audiobooks} 0775 root media - -"
+        ]
+        (lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) [
+          "d /var/wizarr 0755 wizarr wizarr - -"
+        ])
+        (lib.mkIf cfg.emby.enable [
+          "d /var/emby 0770 emby emby - -"
+          "d /var/emby/config 0770 emby emby - -"
+        ])
       ];
 
       virtualisation.oci-containers.containers.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) {
@@ -332,6 +415,11 @@ services.caddy = let
       extraConfig = ''
         ${lib.optionalString cfg.jellyfin.enable ''
         jellyfin.${cfg.domainBase} {
+          ${tlsLine}
+          reverse_proxy 127.0.0.1:8096
+        }''}
+        ${lib.optionalString cfg.emby.enable ''
+        emby.${cfg.domainBase} {
           ${tlsLine}
           reverse_proxy 127.0.0.1:8096
         }''}
