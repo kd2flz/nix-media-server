@@ -66,7 +66,7 @@ Per-host testing branches (`testing-<hostname>`) are also supported by Comin and
 `services.mediaServer.gpu` (enum: `"intel"` / `"nvidia"` / `"none"`, default `"intel"`) is the single knob for hardware transcoding. Setting it:
 
 - **`"intel"`** — adds `intel-media-driver` to `hardware.graphics.extraPackages` (VA-API)
-- **`"nvidia"`** — loads the proprietary NVIDIA driver via `services.xserver.videoDrivers`, enables modesetting, and adds the Jellyfin/Emby service user to the `video` and `render` groups (required for `/dev/dri` and `/dev/nvidia*` access). All NVIDIA `hardware.nvidia.*` options are set in the module; hosts only need to set the option. For pre-Pascal GPUs (GTX 900 or older), override `hardware.nvidia.package` to `nvidiaPackages.legacy_470` in the host's `default.nix`.
+- **`"nvidia"`** — loads the proprietary NVIDIA driver via `services.xserver.videoDrivers`, enables modesetting, adds the Jellyfin/Emby service user to the `video` and `render` groups (required for `/dev/dri` and `/dev/nvidia*` access), and enables `hardware.nvidia-container-toolkit` for Podman GPU passthrough via CDI. All NVIDIA `hardware.nvidia.*` options are set in the module; hosts only need to set the option. For pre-Pascal GPUs (GTX 900 or older), override `hardware.nvidia.package` to `nvidiaPackages.legacy_470` in the host's `default.nix`.
 - **`"none"`** — software transcode only
 
 ### BTRFS RAID1 for media storage
@@ -108,18 +108,18 @@ For public-facing hosts, use a **wildcard PKCS#12 cert** stored in sops. The mod
 1. **Get a wildcard cert** from your CA in PKCS#12 (`.p12`) format covering `*.your-domain.com`. **Critical: the wildcard (`*.domain.com`) must be in the Subject Alternative Name (SAN), not just the Common Name (CN).** Modern browsers and Android exclusively check the SAN and ignore the CN — a cert with `*.media-bel.ccistack.com` only in the CN will fail for all subdomains. Request both of these in the SAN:
    - `DNS:*.media-bel.ccistack.com`
    - `DNS:media-bel.ccistack.com` (root domain, for direct access)
-2. **Base64-encode it:**
+2. **Base64-encode it and capture the value:**
    ```bash
-   base64 -w0 /path/to/cert.p12 > /tmp/cert_b64.txt
+   CERT_B64=$(base64 -w0 /path/to/cert.p12)
    ```
-3. **Add sops secret definitions** in the host's `hosts/<name>/default.nix`:
+3. **Add sops secret definitions** in the host's `hosts/<name>/default.nix`. Use the domain suffix as a unique key so each host has its own cert:
    ```nix
-   sops.secrets.media_tls_pk12 = {
+   sops.secrets.media_tls_pk12_<suffix> = {   # e.g. media_tls_pk12_hws for media-hws
      mode = "0440";
      owner = "root";
      group = "root";
    };
-   sops.secrets.media_tls_pk12_pass = {
+   sops.secrets.media_tls_pk12_pass = {        # shared password secret
      mode = "0440";
      owner = "root";
      group = "root";
@@ -127,24 +127,25 @@ For public-facing hosts, use a **wildcard PKCS#12 cert** stored in sops. The mod
    ```
 4. **Wire the secrets** to the module options:
    ```nix
-   tls.pkcs12File = config.sops.secrets.media_tls_pk12.path;
+   tls.pkcs12File = config.sops.secrets.media_tls_pk12_<suffix>.path;
    tls.pkcs12PasswordFile = config.sops.secrets.media_tls_pk12_pass.path;
    ```
 5. **Store the cert in sops** (run inside `nix develop`):
    ```bash
-   sops --set '["media_tls_pk12"]' "$(cat /tmp/cert_b64.txt | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')" secrets/secrets.yaml
+   sops set secrets/secrets.yaml '["media_tls_pk12_<suffix>"]' '"'"$CERT_B64"'"'
    ```
-6. **Store the password** the same way (never commit it in plaintext):
+   If the password is different from other hosts, add it too:
    ```bash
-   sops --set '["media_tls_pk12_pass"]' '"your-password"' secrets/secrets.yaml
+   sops set secrets/secrets.yaml '["media_tls_pk12_pass"]' '"your-password"'
    ```
 
-**Secret naming convention:** Use `media_tls_pk12` for the base64-encoded cert and `media_tls_pk12_pass` for its password. These names are shared across all hosts in the same `secrets.yaml`; sops encrypts for all recipients listed in `.sops.yaml`.
+**Secret naming convention:** Use `media_tls_pk12_<suffix>` for each host's base64-encoded cert (e.g., `media_tls_pk12_hws`, `media_tls_pk12_bel`) and a shared `media_tls_pk12_pass` if the password is common. If a host has a unique password, create a host-specific password secret too.
 
 **To verify extraction works locally:**
 ```bash
 nix develop --command bash -c '
-  b64=$(sops decrypt secrets/secrets.yaml 2>/dev/null | grep "^media_tls_pk12:" | sed "s/^media_tls_pk12: //")
+  SECRET_KEY="media_tls_pk12_<suffix>"   # e.g. media_tls_pk12_hws
+  b64=$(sops decrypt --extract "[\"$SECRET_KEY\"]" secrets/secrets.yaml 2>/dev/null)
   echo "$b64" | base64 -d > /tmp/test_cert.p12
   openssl pkcs12 -in /tmp/test_cert.p12 -passin pass:your-password -nokeys -out /tmp/test_cert.pem
   openssl x509 -in /tmp/test_cert.pem -noout -subject -dates
@@ -207,8 +208,8 @@ services.mediaServer = {
 };
 ```
 
-For NVIDIA GPUs, add `cudaCapabilities` (match existing hosts or run `nix-smi --query-gpu=compute_cap`).
-For wildcard TLS, add `sops.secrets.media_tls_pk12` and wire to `tls.pkcs12File`/`tls.pkcs12PasswordFile`.
+For NVIDIA GPUs, add `nixpkgs.config.cudaCapabilities` (match existing hosts or run `nix-smi --query-gpu=compute_cap`). The module auto-enables `hardware.nvidia-container-toolkit` for Podman GPU passthrough.
+For wildcard TLS, add `sops.secrets.media_tls_pk12_<suffix>` using a host-specific suffix and wire to `tls.pkcs12File`/`tls.pkcs12PasswordFile`. See "Adding or replacing a wildcard TLS certificate" below.
 
 ### 3. Register the host's age key
 

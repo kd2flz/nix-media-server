@@ -312,14 +312,14 @@ To serve all vhosts with a wildcard certificate instead of Caddy's internal CA:
 
 1. **Request a wildcard cert** from your CA for `*.your.domain`. Ensure the **SAN (Subject Alternative Name)** includes both `DNS:*.your.domain` and `DNS:your.domain` — modern browsers ignore the CN and only check the SAN.
 
-2. **Add sops secret definitions** to your host config:
+2. **Add sops secret definitions** to your host config using a host-specific suffix:
    ```nix
-   sops.secrets.media_tls_pk12 = {
+   sops.secrets.media_tls_pk12_<suffix> = {   # e.g. media_tls_pk12_hws
      mode = "0440";
      owner = "root";
      group = "root";
    };
-   sops.secrets.media_tls_pk12_pass = {
+   sops.secrets.media_tls_pk12_pass = {        # shared password secret
      mode = "0440";
      owner = "root";
      group = "root";
@@ -329,18 +329,20 @@ To serve all vhosts with a wildcard certificate instead of Caddy's internal CA:
 3. **Set the pkcs12 options** in the mediaServer config:
    ```nix
    services.mediaServer = {
-     tls.pkcs12File = config.sops.secrets.media_tls_pk12.path;
+     tls.pkcs12File = config.sops.secrets.media_tls_pk12_<suffix>.path;
      tls.pkcs12PasswordFile = config.sops.secrets.media_tls_pk12_pass.path;
    };
    ```
 
-4. **Base64-encode the p12 and add to sops**:
+4. **Base64-encode and store in sops** (run inside `nix develop`):
    ```bash
-   nix develop
-   base64 -w0 your-cert.p12 > /tmp/p12.b64
-   sops secrets/secrets.yaml
+   CERT_B64=$(base64 -w0 your-cert.p12)
+   sops set secrets/secrets.yaml '["media_tls_pk12_<suffix>"]' '"'"$CERT_B64"'"'
    ```
-   Add `media_tls_pk12: <base64 string>` and `media_tls_pk12_pass: "<password>"`.
+   If the password differs from other hosts, store it too:
+   ```bash
+   sops set secrets/secrets.yaml '["media_tls_pk12_pass"]' '"your-password"'
+   ```
 
 5. **Commit, push, deploy**. The module's activation script extracts PEM cert+key to `/var/lib/caddy/tls/` during boot, before Caddy starts.
 
