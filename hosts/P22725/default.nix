@@ -17,8 +17,9 @@
   # sops: decrypt secrets at boot using the host's SSH host key
   sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
-  # Wildcard TLS certificate for media-hws.ccistack.com (PKCS#12) and its password
-  sops.secrets.media_tls_pk12 = {
+  # TLS certificate for media-hws.ccistack.com (PKCS#12) and its password
+  # (password is shared with media-bel, kept as media_tls_pk12_pass)
+  sops.secrets.media_tls_pk12_hws = {
     mode = "0440";
     owner = "root";
     group = "root";
@@ -40,7 +41,7 @@
     #               invites.media-hws.ccistack.com, grafana.media-hws.ccistack.com
     domainBase = "media-hws.ccistack.com";
     tlsMode = "internal";
-    tls.pkcs12File = config.sops.secrets.media_tls_pk12.path;
+    tls.pkcs12File = config.sops.secrets.media_tls_pk12_hws.path;
     tls.pkcs12PasswordFile = config.sops.secrets.media_tls_pk12_pass.path;
 
     gpu = "nvidia";
