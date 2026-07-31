@@ -157,6 +157,40 @@ Verify the SAN contains `DNS:*.your-domain.com` — if it's missing, the cert wi
 
 **To deploy:** Commit, push to the appropriate branch (see Git workflow), and comin auto-deploys. On the host, the `extract-media-tls` activation script runs before systemd starts and places the cert at `/var/lib/caddy/tls/cert.pem` and key at `/var/lib/caddy/tls/key.pem`. Caddy picks them up automatically.
 
+### Emby Prometheus session exporter
+
+When `emby.enable = true` and `emby.apiKeyFile` is set, a Python exporter runs as `emby-exporter.service` that polls the Emby API every 15s and serves Prometheus metrics on `127.0.0.1:8097/metrics`.
+
+**Metrics exposed:**
+- `emby_sessions_total` — total active sessions
+- `emby_sessions_playing` — sessions currently playing
+- `emby_sessions_transcoding` — sessions being transcoded
+- `emby_sessions_hw_decode` / `emby_sessions_hw_encode` — hardware codec usage
+- `emby_session_info` — per-session labels (user, device, client)
+
+**To set up:**
+
+1. In the Emby web UI, go to **Settings → Advanced → API Keys** and create a new key.
+2. Store it in sops using a host-specific suffix (e.g. `_hws` for media-hws):
+   ```bash
+   nix develop
+   sops set secrets/secrets.yaml '["emby_api_key_<suffix>"]' '"<your-api-key>"'
+   ```
+3. In the host's `default.nix`, add the secret definition:
+   ```nix
+   sops.secrets.emby_api_key_<suffix> = {
+     mode = "0440";
+     owner = "root";
+     group = "root";
+   };
+   ```
+4. Wire it to the module:
+   ```nix
+   services.mediaServer.emby.apiKeyFile = config.sops.secrets.emby_api_key_<suffix>.path;
+   ```
+
+A Grafana dashboard **"Emby Sessions"** is auto-provisioned with panels for sessions, transcoding, HW codec stats, and a session table.
+
 ## Conventions worth knowing
 
 - New module options go under `services.mediaServer.<name>.enable` (and friends) in `modules/media-server.nix`, then implementation in the same file's `config` block. Don't create one-module-per-service unless it's substantial — the existing module is intentionally a single grab-bag.

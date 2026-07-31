@@ -1,0 +1,176 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "targetBlank": true,
+      "title": "Emby Admin",
+      "tooltip": "Open Emby Admin Dashboard",
+      "type": "link",
+      "url": "http://localhost:8096/web/index.html#/dashboard"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Emby Status",
+      "gridPos": { "x": 0, "y": 0, "w": 3, "h": 3 },
+      "targets": [
+        { "expr": "probe_success{job=\"emby\"}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Active Sessions",
+      "gridPos": { "x": 3, "y": 0, "w": 3, "h": 3 },
+      "targets": [
+        { "expr": "emby_sessions_total", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Playing",
+      "gridPos": { "x": 6, "y": 0, "w": 3, "h": 3 },
+      "targets": [
+        { "expr": "emby_sessions_playing", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Transcoding",
+      "gridPos": { "x": 9, "y": 0, "w": 3, "h": 3 },
+      "targets": [
+        { "expr": "emby_sessions_transcoding", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "HW Decode",
+      "gridPos": { "x": 12, "y": 0, "w": 3, "h": 3 },
+      "targets": [
+        { "expr": "emby_sessions_hw_decode", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "HW Encode",
+      "gridPos": { "x": 15, "y": 0, "w": 3, "h": 3 },
+      "targets": [
+        { "expr": "emby_sessions_hw_encode", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sessions Over Time",
+      "gridPos": { "x": 0, "y": 3, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "emby_sessions_total", "refId": "A", "legendFormat": "Total" },
+        { "expr": "emby_sessions_playing", "refId": "B", "legendFormat": "Playing" },
+        { "expr": "emby_sessions_transcoding", "refId": "C", "legendFormat": "Transcoding" },
+        { "expr": "emby_sessions_hw_decode", "refId": "D", "legendFormat": "HW Decode" },
+        { "expr": "emby_sessions_hw_encode", "refId": "E", "legendFormat": "HW Encode" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Active Sessions",
+      "gridPos": { "x": 12, "y": 3, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "emby_session_info", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto" },
+          "displayMode": "color-background"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "provider": "", "options": "Value" },
+            "properties": [ { "id": "custom.hidden", "value": true } ]
+          }
+        ]
+      },
+      "transformations": [
+        { "id": "labelsToFields", "options": {} }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["emby", "media"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Emby Sessions"
+}

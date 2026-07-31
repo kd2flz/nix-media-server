@@ -29,8 +29,23 @@ sudo nixos-rebuild switch --flake .#<hostname>
 ```bash
 journalctl -u <service> -n 50 --no-pager
 journalctl -u comin -n 200 --no-pager
+journalctl -u emby-exporter -n 50 --no-pager
 podman ps
 podman logs <container>
+```
+
+### Verify GPU in Emby
+```bash
+# On the host, while transcoding:
+nvidia-smi
+# Or check exporter metrics:
+curl -s http://127.0.0.1:8097/metrics | grep emby_sessions_hw
+```
+
+### Add Emby API key to sops
+```bash
+nix develop
+sops set secrets/secrets.yaml '["emby_api_key_<suffix>"]' '"<key-from-emby-settings>"'
 ```
 
 ### Secrets (run inside `nix develop`)

@@ -31,6 +31,13 @@
     group = "root";
   };
 
+  # Emby API key used by the Prometheus session exporter
+  sops.secrets.emby_api_key_hws = {
+    mode = "0440";
+    owner = "root";
+    group = "root";
+  };
+
   services.monitoring.enable = true;
 
   services.mediaServer = {
@@ -56,6 +63,7 @@
     audiobookshelf.enable = true;
     jellyfin.enable       = false;
     emby.enable           = true;
+    emby.apiKeyFile       = config.sops.secrets.emby_api_key_hws.path;
     wizarr.enable         = true;
     samba.enable          = true;
     nanitor.enable        = true;
