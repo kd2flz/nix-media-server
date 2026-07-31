@@ -93,6 +93,11 @@ in
             { target_label = "__address__"; replacement = "127.0.0.1:9115"; }
           ];
         }
+        {
+          job_name = "emby-exporter";
+          metrics_path = "/metrics";
+          static_configs = [ { targets = [ "127.0.0.1:8097" ]; } ];
+        }
       ] ++ [
         {
           job_name = "audiobookshelf";
@@ -470,6 +475,40 @@ in
                 };
                 labels = { severity = "critical"; };
               }
+              {
+                uid = "emby-exporter-down";
+                title = "Emby Exporter Down";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  relativeTimeRange = {
+                    from = 120;
+                    to = 0;
+                  };
+                  datasourceUid = "PBFA97CFB590B2093";
+                  model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "PBFA97CFB590B2093";
+                    };
+                    expr = "up{job=\"emby-exporter\"} == 0";
+                    instant = true;
+                    interval = null;
+                    intervalMs = 15000;
+                    maxDataPoints = 43200;
+                    range = false;
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "2m";
+                annotations = {
+                  summary = "Emby session exporter down";
+                  description = "Emby session exporter has been unavailable for 2 minutes";
+                };
+                labels = { severity = "warning"; };
+              }
             ] ++ [
               {
                 uid = "comin-down";
@@ -555,6 +594,8 @@ in
       "grafana-dashboards/audiobookshelf.json".source   = ./dashboards/audiobookshelf.json;
     } // lib.optionalAttrs (mediaCfg.jellyfin.enable or false) {
       "grafana-dashboards/jellyfin.json".source         = ./dashboards/jellyfin.json;
+    } // lib.optionalAttrs (mediaCfg.emby.enable or false) {
+      "grafana-dashboards/emby-sessions.json".source    = ./dashboards/emby-sessions.json;
     };
 
     #############################################
