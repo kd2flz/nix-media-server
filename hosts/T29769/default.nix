@@ -7,10 +7,8 @@
   ];
 
   services.monitoring.enable = true;
-
-  # Optional dead-man-switch:
-  #services.monitoring.enableDeadManSwitch = true;
-  #services.monitoring.deadManURL = "https://hc-ping.com/<your-uuid>";
+  services.monitoring.enableDeadManSwitch = true;
+  services.monitoring.deadManURL = "https://hc-ping.com/000e29a6-91e0-45e8-a05a-f1d0513decdb";
 
   networking.hostName = "T29769";       # per-host can override if desired
   time.timeZone = "America/New_York";
