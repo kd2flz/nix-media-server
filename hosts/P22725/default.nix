@@ -39,6 +39,8 @@
   };
 
   services.monitoring.enable = true;
+  services.monitoring.enableDeadManSwitch = true;
+  services.monitoring.deadManURL = "https://hc-ping.com/879c4712-d8ca-4f69-ad41-3e587d9dba65";
 
   services.mediaServer = {
     enable = true;
