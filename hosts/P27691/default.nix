@@ -68,6 +68,9 @@
   # that runs on Pascal. This is a host-level concern, not a module option.
   nixpkgs.config.cudaCapabilities = [ "6.1" "7.5" "8.0" "8.6" ];
 
+  # Quadro P2200 is Pascal (SM 6.1) — requires legacy driver (same as media-hws).
+  hardware.nvidia.package = lib.mkForce config.boot.kernelPackages.nvidiaPackages.legacy_580;
+
   services.ollamaServer = {
     enable       = true;
     acceleration = "cuda";
