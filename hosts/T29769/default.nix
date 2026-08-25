@@ -1,5 +1,5 @@
 
-{ pkgs, lib, ... }:
+{ pkgs, lib, config, ... }:
 {
 
   imports = [
@@ -27,6 +27,14 @@
     mode = "0400";
   };
 
+  # KACE SMA host: per-host secret, not shared across hosts (see
+  # services.mediaServer.kace.hostFile in modules/media-server.nix).
+  sops.secrets.kace_host_t29769 = {
+    owner = "root";
+    group = "root";
+    mode = "0400";
+  };
+
   services.mediaServer = {
     enable = true;
     domainBase = "t29769.community.int"; # site-specific base domain
@@ -44,5 +52,9 @@
     emby.enable = false;
     wizarr.enable = true;
     nanitor.enable = true;
+
+    kace.enable = true;
+    kace.hostFile = config.sops.secrets.kace_host_t29769.path;
+    kace.packageUrl = "https://github.com/kd2flz/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
   };
 }
