@@ -30,6 +30,14 @@
     group = "root";
   };
 
+  # KACE SMA host: per-host secret, not shared across hosts (see
+  # services.mediaServer.kace.hostFile in modules/media-server.nix).
+  sops.secrets.kace_host_p27691 = {
+    mode = "0440";
+    owner = "root";
+    group = "root";
+  };
+
   services.monitoring.enable = true;
 
   services.mediaServer = {
@@ -60,6 +68,10 @@
     wizarr.enable         = true;
     samba.enable          = true;
     nanitor.enable        = true;
+
+    kace.enable     = true;
+    kace.hostFile   = config.sops.secrets.kace_host_p27691.path;
+    kace.packageUrl = "https://github.com/kd2flz/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
   };
 
   # Quadro P2200 is Pascal (SM 6.1). The nixpkgs default CUDA build targets

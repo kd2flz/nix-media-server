@@ -38,6 +38,27 @@
         "type": "github"
       }
     },
+    "kace-ampagent": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787662339,
+        "narHash": "sha256-wPYNWQzlhdf+wb5UuOCj5+Ve4hmNJTjmNuJeYL3brm8=",
+        "owner": "kd2flz",
+        "repo": "kace-ampagent",
+        "rev": "05a78867aaa7539c7c860baf529b096d254cbaf4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kd2flz",
+        "ref": "main",
+        "repo": "kace-ampagent",
+        "type": "github"
+      }
+    },
     "nanitor": {
       "inputs": {
         "nixpkgs": [
@@ -93,6 +114,7 @@
     "root": {
       "inputs": {
         "comin": "comin",
+        "kace-ampagent": "kace-ampagent",
         "nanitor": "nanitor",
         "nixpkgs": "nixpkgs_2",
         "sops-nix": "sops-nix"

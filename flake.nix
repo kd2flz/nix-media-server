@@ -19,10 +19,15 @@
       url = "github:kd2flz/nanitor-agent";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    kace-ampagent = {
+      url = "github:kd2flz/kace-ampagent/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Add `...` so future inputs don't break the flake
-  outputs = { self, nixpkgs, comin, sops-nix, nanitor, ... }:
+  outputs = { self, nixpkgs, comin, sops-nix, nanitor, kace-ampagent, ... }:
   let
     system = "x86_64-linux";
     hostNames = builtins.filter (host:
@@ -96,7 +101,11 @@
             
             # Enable nanitor agent NixOS module
             nanitor.nixosModules.nanitor-agent
-            
+
+            # Enable KACE AMP agent NixOS module (registers its own overlay
+            # for pkgs.kace-ampagent, built against this flake's nixpkgs)
+            kace-ampagent.nixosModules.kace-ampagent
+
             # Per-host comin configuration
             {
               services.comin = {
