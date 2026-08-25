@@ -331,7 +331,8 @@ When the agent proposes a code change:
    - A bullet-point summary of what changed and why
    - Ask explicitly for approval before proceeding
 5. **Squash before merge.** Once approved, rebase-edit history so all feature-branch commits are squashed into a single descriptive commit message. Then merge to the target branch.
-6. **Never push to the target branch directly.** Only merge your feature branch after review.
+6. **Clean up after merge.** Once the feature branch is merged, delete the local copy (`git branch -d <branch>`). Never push feature branches to the remote — they exist locally only until merged.
+7. **Never push to the target branch directly.** Only merge your feature branch after review.
 
 ## Common mistakes to avoid
 
