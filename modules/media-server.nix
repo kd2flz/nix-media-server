@@ -95,6 +95,43 @@ in
       description = "Log level for nanitor agent (debug, info, warn, error).";
     };
 
+    kace.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enable the Quest KACE AMP Agent (services.kace-ampagent, from the
+        kace-ampagent flake input). Requires kace.hostFile to be set.
+      '';
+    };
+
+    kace.hostFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = ''
+        Path to a file containing the KACE SMA host (e.g.
+        config.sops.secrets.kace_host_<host>.path). Read at activation
+        *runtime* by the upstream module rather than interpolated at eval
+        time, so the hostname never enters the Nix store. Deliberately has
+        no default and is NOT shared across hosts — the SMA host can differ
+        per site, so each host must set its own secret and pass it here
+        explicitly. Required when kace.enable = true.
+      '';
+      example = lib.literalExpression "config.sops.secrets.kace_host_<host>.path";
+    };
+
+    kace.packageUrl = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        URL to fetch the KACE agent tarball for a pure build (fetchurl,
+        verified against the pinned sha256 in the kace-ampagent package).
+        Not a secret — safe as a plain string (e.g. a public GitHub
+        Releases link). If null, the package falls back to requireFile
+        and expects the tarball already in the Nix store.
+      '';
+      example = "https://github.com/your-org/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
+    };
+
     gpu = lib.mkOption {
       type = lib.types.enum [ "intel" "nvidia" "none" ];
       default = "intel";
@@ -165,6 +202,10 @@ in
       {
         assertion = !(cfg.jellyfin.enable && cfg.emby.enable);
         message = "services.mediaServer.jellyfin.enable and services.mediaServer.emby.enable cannot both be true. Choose one media server.";
+      }
+      {
+        assertion = !cfg.kace.enable || cfg.kace.hostFile != null;
+        message = "services.mediaServer.kace.enable = true requires kace.hostFile to be set (e.g. config.sops.secrets.kace_host_<host>.path). There is no default -- the SMA host can differ per site.";
       }
     ];
 
@@ -513,7 +554,27 @@ services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
         enroll.serverUrlFile = config.sops.secrets.nanitor_endpoint.path;
       };
 
-      
+      ########################################
+      # Quest KACE AMP agent (optional)
+      ########################################
+      # Enables the KACE AMP agent (konea/KSchedulerConsole) for SMA-managed
+      # inventory/patching. Unlike nanitor above, this module does NOT declare
+      # its own sops secret: the SMA host is per-site (unlike Nanitor's shared
+      # enroll token/endpoint), so each host's default.nix must declare its
+      # own sops.secrets.kace_host_<host> and point kace.hostFile at it. See
+      # CLAUDE.md "Adding KACE to a host" for the full walkthrough.
+      #
+      #   services.mediaServer.kace = {
+      #     enable = true;
+      #     hostFile = config.sops.secrets.kace_host_<host>.path;
+      #     packageUrl = "https://.../ampagent-15.1.45.ubuntu.64.tar.gz"; # optional
+      #   };
+
+      services.kace-ampagent = lib.mkIf cfg.kace.enable {
+        enable = true;
+        hostFile = cfg.kace.hostFile;
+        packageUrl = cfg.kace.packageUrl;
+      };
 
 
     ########################################

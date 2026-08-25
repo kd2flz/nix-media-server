@@ -41,11 +41,12 @@ sudo comin eval
 
 Every host gets the same module stack injected automatically:
 - `modules/common.nix` — SSH (key-only, no password auth), admin user, Nix GC, Podman, GNOME, `stateVersion`
-- `modules/media-server.nix` — the `services.mediaServer.*` option tree (Jellyfin/Emby, Audiobookshelf, Wizarr, Samba, Caddy, Nanitor)
+- `modules/media-server.nix` — the `services.mediaServer.*` option tree (Jellyfin/Emby, Audiobookshelf, Wizarr, Samba, Caddy, Nanitor, KACE)
 - `modules/monitoring.nix` — `services.monitoring.*` (Prometheus + Grafana + exporters + alert rules)
 - `sops-nix` module with `sops.defaultSopsFile` pre-pointed at `secrets/secrets.yaml`
 - `comin` module
 - `nanitor-agent` module (from the `nanitor` flake input), exposed via a `nanitorOverlay` that adds `pkgs.nanitor-agent`
+- `kace-ampagent` module (from the `kace-ampagent` flake input), registering its own overlay for `pkgs.kace-ampagent`
 
 Host `default.nix` files therefore only need to set hostname, timezone, bootloader, `sops.age.sshKeyPaths`, and toggle `services.mediaServer.*` / `services.monitoring.enable`.
 
@@ -85,6 +86,35 @@ For hosts with two drives mirroring `/srv/media`:
 `modules/nanitor-agent-override.nix` uses `lib.mkForce` to replace the upstream `systemd.services.nanitor-agent.preStart`. The upstream module writes the enrollment key as `JWT\nSIGNATURE`, but nanitor-agent v7 requires `JWT\n+\nSIGNATURE`. The override detects keys containing ` + ` and reformats them; keys without the separator pass through unchanged (backward compatible).
 
 It is imported per-host (not globally), currently only by `hosts/T29769/default.nix`. The upstream issue is tracked at https://github.com/kd2flz/nanitor-agent/issues/9 — only remove this override after confirming the fix is in `flake.lock`.
+
+### Quest KACE AMP agent (`services.mediaServer.kace.*`)
+
+The `kace-ampagent` flake input (`github:kd2flz/kace-ampagent/main`) provides `konea`/`KSchedulerConsole` for SMA-managed inventory/patching, wired into `modules/media-server.nix` as `services.mediaServer.kace.*`, which proxies to the upstream `services.kace-ampagent.*` module options:
+
+- `kace.enable` (bool, default `false`)
+- `kace.hostFile` (nullable path, default `null`, **no fallback/shared default across hosts**) — path to a file containing the SMA host, read via `cat` at activation **runtime** by the upstream module rather than interpolated at eval time, so the hostname never enters the Nix store or a `.drv`. Must point at a per-host sops secret.
+- `kace.packageUrl` (nullable string, default `null`) — a plain string, not a secret (a public tarball URL bakes into the derivation/`.drv` via `fetchurl` regardless of how it's sourced, so routing it through sops would only force impure eval for no benefit).
+
+**Why `hostFile` has no default, unlike Nanitor's shared `nanitor_enroll_token`/`nanitor_endpoint`:** all current hosts happen to point at the same kbox server (`kbox.ccistack.com`), but a future host could be a different KACE organization/site. Each host therefore declares its **own** suffixed secret (`kace_host_<host>`, matching the `media_tls_pk12_<suffix>` / `emby_api_key_<suffix>` per-host-suffix convention) rather than a single shared key — copy-pasting the value across hosts today doesn't lock you into sharing it later.
+
+**To add KACE to a host:**
+1. Add the secret (run inside `nix develop`):
+   ```bash
+   sops set secrets/secrets.yaml '["kace_host_<host>"]' '"kbox.example.com"'
+   ```
+2. In the host's `default.nix`:
+   ```nix
+   sops.secrets.kace_host_<host> = { mode = "0440"; owner = "root"; group = "root"; };
+
+   services.mediaServer.kace = {
+     enable = true;
+     hostFile = config.sops.secrets.kace_host_<host>.path;
+     packageUrl = "https://.../ampagent-15.1.45.ubuntu.64.tar.gz"; # optional; omit to require a manually-imported tarball (requireFile)
+   };
+   ```
+3. Ensure the host's module header includes `config` in its function args (`{ pkgs, lib, config, ... }:`).
+
+An assertion in `modules/media-server.nix` fails eval with a clear message if `kace.enable = true` but `kace.hostFile` is unset.
 
 ### Secrets flow
 
@@ -221,7 +251,7 @@ fileSystems."/srv/media" =
   };
 ```
 
-**`default.nix`** — set these options:
+**`default.nix`** — set these options (module header needs `config` in scope, e.g. `{ pkgs, lib, config, ... }:`, if you wire up KACE or per-host sops secrets):
 ```nix
 networking.hostName = "<hostname>";       # must match directory name
 time.timeZone = "America/New_York";
@@ -241,6 +271,7 @@ services.mediaServer = {
   nanitor.enable = true;
 };
 ```
+For KACE, see "Quest KACE AMP agent" above — it needs its own per-host sops secret (`kace_host_<host>`), there is no shared default.
 
 For NVIDIA GPUs, add `nixpkgs.config.cudaCapabilities` (match existing hosts or run `nix-smi --query-gpu=compute_cap`). The module auto-enables `hardware.nvidia-container-toolkit` for Podman GPU passthrough.
 For wildcard TLS, add `sops.secrets.media_tls_pk12_<suffix>` using a host-specific suffix and wire to `tls.pkcs12File`/`tls.pkcs12PasswordFile`. See "Adding or replacing a wildcard TLS certificate" below.

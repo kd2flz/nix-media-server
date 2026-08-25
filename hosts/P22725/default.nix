@@ -38,6 +38,14 @@
     group = "root";
   };
 
+  # KACE SMA host: per-host secret, not shared across hosts (see
+  # services.mediaServer.kace.hostFile in modules/media-server.nix).
+  sops.secrets.kace_host_p22725 = {
+    mode = "0440";
+    owner = "root";
+    group = "root";
+  };
+
   services.monitoring.enable = true;
   services.monitoring.enableDeadManSwitch = true;
   services.monitoring.deadManURL = "https://hc-ping.com/879c4712-d8ca-4f69-ad41-3e587d9dba65";
@@ -69,6 +77,10 @@
     wizarr.enable         = true;
     samba.enable          = true;
     nanitor.enable        = true;
+
+    kace.enable     = true;
+    kace.hostFile   = config.sops.secrets.kace_host_p22725.path;
+    kace.packageUrl = "https://github.com/kd2flz/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
   };
 
   nixpkgs.config.cudaCapabilities = [ "6.1" "7.5" "8.0" "8.6" ];
