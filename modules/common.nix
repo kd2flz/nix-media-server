@@ -1,5 +1,5 @@
 
-{ config, lib, pkgs, ... }:
+{ config, lib, options, pkgs, ... }:
 {
 
   # Enable SSH
@@ -97,6 +97,9 @@
 
   # LAN networking
   networking.networkmanager.enable = true;
+
+  # Internal time servers.
+  networking.timeServers = options.networking.timeServers.default ++ [ "192.168.2.19" "192.168.82.19" ];
 
   # Enable Podman
   virtualisation.containers.enable = true;
