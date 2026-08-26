@@ -45,7 +45,8 @@
 
     # CNAME media-bel.ccistack.com → P27691 (set on Solid Server DNS)
     # Caddy serves: jellyfin.media-bel.ccistack.com, books.media-bel.ccistack.com,
-    #               invites.media-bel.ccistack.com, grafana.media-bel.ccistack.com
+    #               invites.media-bel.ccistack.com, iptv.media-bel.ccistack.com,
+    #               grafana.media-bel.ccistack.com
     domainBase = "media-bel.ccistack.com";
     tlsMode = "internal";
     tls.pkcs12File = config.sops.secrets.media_tls_pk12.path;
@@ -66,6 +67,7 @@
     audiobookshelf.enable = true;
     jellyfin.enable       = true;
     wizarr.enable         = true;
+    dispatcharr.enable    = true;
     samba.enable          = true;
     nanitor.enable        = true;
 

@@ -74,6 +74,12 @@ in
       description = "Enable Wizarr Module.";
     };
 
+    dispatcharr.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable Dispatcharr IPTV stream manager (container).";
+    };
+
     samba.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -484,6 +490,9 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
           "d /var/emby 0770 emby emby - -"
           "d /var/emby/config 0770 emby emby - -"
         ])
+        (lib.mkIf cfg.dispatcharr.enable [
+          "d /var/dispatcharr 0755 root root - -"
+        ])
       ];
 
       virtualisation.oci-containers.containers.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) {
@@ -509,6 +518,37 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
             "--network=host"
           ];
          };
+
+
+      ########################################
+      # Dispatcharr (optional)
+      ########################################
+
+      virtualisation.oci-containers.containers.dispatcharr = lib.mkIf cfg.dispatcharr.enable {
+          image = "ghcr.io/dispatcharr/dispatcharr:latest";
+
+          volumes = [
+            "/var/dispatcharr:/data"
+          ];
+
+          environment = {
+            DISPATCHARR_ENV = "aio";
+            REDIS_HOST = "localhost";
+            CELERY_BROKER_URL = "redis://localhost:6379/0";
+            DISPATCHARR_LOG_LEVEL = "info";
+            TZ = config.time.timeZone or "UTC";
+          };
+
+          extraOptions = [
+            "--name=dispatcharr"
+            "--network=host"
+          ] ++ lib.optionals (cfg.gpu == "nvidia") [
+            "--gpus=all"
+            "--device=/dev/dri:/dev/dri"
+          ] ++ lib.optionals (cfg.gpu == "intel") [
+            "--device=/dev/dri:/dev/dri"
+          ];
+        };
 
 
       ########################################
@@ -612,6 +652,11 @@ services.caddy = let
         books.${cfg.domainBase} {
           ${tlsLine}
           reverse_proxy 127.0.0.1:13378
+        }''}
+        ${lib.optionalString cfg.dispatcharr.enable ''
+        iptv.${cfg.domainBase} {
+          ${tlsLine}
+          reverse_proxy 127.0.0.1:9191
         }''}
         ${lib.optionalString config.services.monitoring.enable ''
         grafana.${cfg.domainBase} {
