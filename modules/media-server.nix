@@ -573,7 +573,7 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
       ########################################
       # Dispatcharr MCP server (optional)
       ########################################
-      sops.secrets.dispatcharr_mcp_api_key = lib.mkIf (cfg.dispatcharrMcp.enable && cfg.dispatcharrMcp.apiKeyFile != null) {
+      sops.secrets.dispatcharr_mcp_api_key = lib.mkIf cfg.dispatcharrMcp.enable {
         mode = "0400";
         owner = "root";
         group = "root";
