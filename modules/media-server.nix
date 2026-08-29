@@ -80,6 +80,22 @@ in
       description = "Enable Dispatcharr IPTV stream manager (container).";
     };
 
+    dispatcharrMcp.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable the Dispatcharr MCP server (AI agent control plane) on port 8000.";
+    };
+
+    dispatcharrMcp.apiKeyFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = ''
+        Path to a file containing the Dispatcharr API key for the MCP server.
+        Point this at config.sops.secrets.dispatcharr_mcp_api_key.path; the host
+        must declare that secret (see P27691/default.nix for the pattern).
+      '';
+    };
+
     samba.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -212,6 +228,10 @@ in
       {
         assertion = !cfg.kace.enable || cfg.kace.hostFile != null;
         message = "services.mediaServer.kace.enable = true requires kace.hostFile to be set (e.g. config.sops.secrets.kace_host_<host>.path). There is no default -- the SMA host can differ per site.";
+      }
+      {
+        assertion = !cfg.dispatcharrMcp.enable || cfg.dispatcharrMcp.apiKeyFile != null;
+        message = "services.mediaServer.dispatcharrMcp.enable = true requires dispatcharrMcp.apiKeyFile (config.sops.secrets.dispatcharr_mcp_api_key.path).";
       }
     ];
 
@@ -550,6 +570,47 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
           ];
         };
 
+      ########################################
+      # Dispatcharr MCP server (optional)
+      ########################################
+      sops.secrets.dispatcharr_mcp_api_key = lib.mkIf (cfg.dispatcharrMcp.enable && cfg.dispatcharrMcp.apiKeyFile != null) {
+        mode = "0400";
+        owner = "root";
+        group = "root";
+      };
+
+      # Render the API key into an env file read by the container at startup.
+      # The MCP image only accepts DISPATCHARR_API_KEY as a plain env var, so we
+      # derive it from the sops-decrypted secret instead of baking it into the store.
+      systemd.services.dispatcharr-mcp-env = lib.mkIf (cfg.dispatcharrMcp.enable && cfg.dispatcharrMcp.apiKeyFile != null) {
+        description = "Render Dispatcharr MCP env file from sops secret";
+        requiredBy = [ "podman-dispatcharr-mcp.service" ];
+        before = [ "podman-dispatcharr-mcp.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = ''
+          install -d -m 700 /run/dispatcharr-mcp
+          printf 'DISPATCHARR_API_KEY=%s\n' "$(cat ${cfg.dispatcharrMcp.apiKeyFile})" > /run/dispatcharr-mcp/env
+          chmod 600 /run/dispatcharr-mcp/env
+        '';
+      };
+
+      virtualisation.oci-containers.containers.dispatcharr-mcp = lib.mkIf cfg.dispatcharrMcp.enable {
+        image = "ghcr.io/crunchingcode/dispatcharr-mcp:latest";
+
+        environment = {
+          DISPATCHARR_URL = "http://127.0.0.1:9191";
+          FASTMCP_HOST = "0.0.0.0";
+        };
+
+        extraOptions = [
+          "--name=dispatcharr-mcp"
+          "--network=host"
+        ] ++ lib.optional (cfg.dispatcharrMcp.apiKeyFile != null) "--env-file=/run/dispatcharr-mcp/env";
+      };
+
 
       ########################################
       # Nanitor monitoring agent (optional)
@@ -678,7 +739,8 @@ services.caddy = let
       # Only open service-specific ports when those services are enabled.
       allowedTCPPorts = [ 80 443 ]
         ++ lib.optionals cfg.wizarr.enable [ 5690 ]
-        ++ lib.optionals config.services.monitoring.enable [ 3000 9001 ];
+        ++ lib.optionals config.services.monitoring.enable [ 3000 9001 ]
+        ++ lib.optionals cfg.dispatcharrMcp.enable [ 8000 ];
     };
 
     ########################################
