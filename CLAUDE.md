@@ -333,6 +333,7 @@ When the agent proposes a code change:
 5. **Squash before merge.** Once approved, rebase-edit history so all feature-branch commits are squashed into a single descriptive commit message. Then merge to the target branch.
 6. **Clean up after merge.** Once the feature branch is merged, delete the local copy (`git branch -d <branch>`). Never push feature branches to the remote — they exist locally only until merged.
 7. **Never push to the target branch directly.** Only merge your feature branch after review.
+8. **Promotion to `main` is via GitHub PR, never local.** After a feature branch is merged into `dev` and pushed, raise a GitHub pull request `dev` → `main` to deploy to production hosts. Never run a local merge into `main`, and never run `git push origin main`.
 
 ## Common mistakes to avoid
 
