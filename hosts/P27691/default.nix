@@ -38,6 +38,13 @@
     group = "root";
   };
 
+  # Dispatcharr MCP API key for the AI-control-plane container.
+  sops.secrets.dispatcharr_mcp_api_key = {
+    mode = "0400";
+    owner = "root";
+    group = "root";
+  };
+
   services.monitoring.enable = true;
 
   services.mediaServer = {
@@ -68,6 +75,8 @@
     jellyfin.enable       = true;
     wizarr.enable         = true;
     dispatcharr.enable    = true;
+    dispatcharrMcp.enable = true;
+    dispatcharrMcp.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
     samba.enable          = true;
     nanitor.enable        = true;
 
