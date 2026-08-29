@@ -322,17 +322,17 @@ Push to the appropriate branch (`main` for production, `dev` for T29769 sandbox)
 
 When the agent proposes a code change:
 
-1. **Ask first.** Do not comment on GitHub issues, close issues, or push code without the user's explicit approval.
+1. **Ask first.** Do not comment on GitHub issues, close issues, merge, or push code without the user's explicit approval.
 2. **Branch before editing.** Before making any file changes, create a feature branch named `<initials>/<descriptive-slug>` (e.g. `dr/fix-audiobookshelf-cert-chain`). Work from the appropriate base branch (`dev` for sandbox, `main` for production).
 3. **Commit incrementally.** Commit each logical change individually to the feature branch. Use `Refs #<issue>` in commit messages when relevant. Never include secrets or passwords in plaintext in commit history.
-4. **Present for review.** When the user asks to push, that triggers the review and merge process. Show the user all changes from the current session in a single review block:
+4. **Present for review — mandatory gate.** The agent must stop and obtain the user's explicit approval before merging OR pushing any change. This is a hard gate with no exceptions: it applies to every change, including bug fixes, one-line corrections, and documentation edits, not just features. Approval for one change never authorizes the next. Present a review block:
    - Branch name and base branch
    - Prettified diff: pipe `git diff <base>...HEAD` through `diff-so-fancy` (available via `nix run nixpkgs#diff-so-fancy`)
    - A bullet-point summary of what changed and why
    - Ask explicitly for approval before proceeding
 5. **Squash before merge.** Once approved, rebase-edit history so all feature-branch commits are squashed into a single descriptive commit message. Then merge to the target branch.
 6. **Clean up after merge.** Once the feature branch is merged, delete the local copy (`git branch -d <branch>`). Never push feature branches to the remote — they exist locally only until merged.
-7. **Never push to the target branch directly.** Only merge your feature branch after review.
+7. **Never merge or push to the target branch without explicit per-change approval.** Only merge your feature branch after the user has approved that specific change.
 8. **Promotion to `main` is via GitHub PR, never local.** After a feature branch is merged into `dev` and pushed, raise a GitHub pull request `dev` → `main` to deploy to production hosts. Never run a local merge into `main`, and never run `git push origin main`.
 
 ## Common mistakes to avoid
