@@ -75,7 +75,7 @@ sops updatekeys secrets/secrets.yaml  # re-encrypt after .sops.yaml change
 - Push to `dev` → deploys to T29769 only
 - Push to `main` → deploys to all production hosts
 - Use `Refs #<issue>` in commits; only `Closes #<issue>` when explicitly asked
-- **Agent changes MUST follow the CLAUDE.md "Agent change workflow"** — branch, commit individually, present for review, squash before merge, delete the local feature branch once merged. Never push to target branches directly, never push feature branches, never merge into `main` locally (raise a GitHub PR `dev`→`main` instead), never comment on or close issues without asking.
+- **Agent changes MUST follow the CLAUDE.md "Agent change workflow"** — branch, commit individually, present for review, squash before merge, delete the local feature branch once merged. Never merge or push without explicit per-change approval, never push feature branches, never merge into `main` locally (raise a GitHub PR `dev`→`main` instead), never comment on or close issues without asking.
 
 ## Key Services
 
