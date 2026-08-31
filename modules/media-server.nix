@@ -4,6 +4,10 @@
 let
   cfg = config.services.mediaServer;
 
+  # Whole package directory (not just cli.js) so its relative imports to
+  # sibling modules resolve once copied into the Nix store.
+  liveSportsEpgSrc = ../packages/live-sports-epg;
+
   # Render a Caddy vhost with optional internal TLS (no global block required)
   vhost = host: upstream: ''
     ${host} {
@@ -93,6 +97,71 @@ in
         Path to a file containing the Dispatcharr API key for the MCP server.
         Point this at config.sops.secrets.dispatcharr_mcp_api_key.path; the host
         must declare that secret (see P27691/default.nix for the pattern).
+      '';
+    };
+
+    liveSportsEpg.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enable the live-sports-epg service (packages/live-sports-epg). Turns a
+        dynamic live-sports M3U playlist into XMLTV EPG data and serves it on
+        an HTTP port for Dispatcharr (or any XMLTV-compatible IPTV client) to
+        pull. Runs as a plain Node.js systemd service — no container needed.
+      '';
+    };
+
+    liveSportsEpg.m3uUrlFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = ''
+        Path to a file containing the source M3U playlist URL. Typically
+        config.sops.secrets.<name>.path if the URL embeds credentials (as
+        with most IPTV providers); required when liveSportsEpg.enable = true.
+      '';
+      example = lib.literalExpression "config.sops.secrets.live_sports_m3u_url.path";
+    };
+
+    liveSportsEpg.listenPort = lib.mkOption {
+      type = lib.types.port;
+      default = 8098;
+      description = "Port the live-sports-epg HTTP server listens on (serves /epg.xml and /status).";
+    };
+
+    liveSportsEpg.refreshMinutes = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 5;
+      description = "How often (in minutes) to refresh the M3U and schedule data.";
+    };
+
+    liveSportsEpg.lookAheadDays = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 7;
+      description = "How many days of upcoming schedule data to fetch from ESPN.";
+    };
+
+    liveSportsEpg.sports = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "MLB" "NFL" "NBA" "NHL" "EPL" "UCL" "LA_LIGA" "BUNDESLIGA" "SERIE_A" "LIGUE_1" "MLS" "WC" "NCAAF" "NCAAB" ];
+      description = "Sport keys to fetch schedule data for (see packages/live-sports-epg/src/types/sports.js).";
+    };
+
+    liveSportsEpg.upcoming = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Emit an "Upcoming:" placeholder programme filling the gap between now
+        and kickoff for matched games that haven't started yet, so the guide
+        grid never shows a blank slot for a channel that's about to go live.
+      '';
+    };
+
+    liveSportsEpg.upcomingMaxHours = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = null;
+      description = ''
+        Cap, in hours, on how far before kickoff the "Upcoming:" placeholder
+        reaches back. Default (null) fills the entire gap back to "now".
       '';
     };
 
@@ -232,6 +301,10 @@ in
       {
         assertion = !cfg.dispatcharrMcp.enable || cfg.dispatcharrMcp.apiKeyFile != null;
         message = "services.mediaServer.dispatcharrMcp.enable = true requires dispatcharrMcp.apiKeyFile (config.sops.secrets.dispatcharr_mcp_api_key.path).";
+      }
+      {
+        assertion = !cfg.liveSportsEpg.enable || cfg.liveSportsEpg.m3uUrlFile != null;
+        message = "services.mediaServer.liveSportsEpg.enable = true requires liveSportsEpg.m3uUrlFile (a sops-decrypted path containing the M3U URL).";
       }
     ];
 
@@ -513,6 +586,10 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
         (lib.mkIf cfg.dispatcharr.enable [
           "d /var/dispatcharr 0755 root root - -"
         ])
+        (lib.mkIf cfg.liveSportsEpg.enable [
+          "d /var/lib/live-sports-epg 0750 live-sports-epg live-sports-epg - -"
+          "d /var/cache/live-sports-epg 0750 live-sports-epg live-sports-epg - -"
+        ])
       ];
 
       virtualisation.oci-containers.containers.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) {
@@ -609,6 +686,75 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
           "--name=dispatcharr-mcp"
           "--network=host"
         ] ++ lib.optional (cfg.dispatcharrMcp.apiKeyFile != null) "--env-file=/run/dispatcharr-mcp/env";
+      };
+
+      ########################################
+      # live-sports-epg (optional)
+      ########################################
+      # Plain Node.js systemd service (no container) — turns a dynamic
+      # live-sports M3U playlist into XMLTV EPG data. See
+      # packages/live-sports-epg/README.md for the full design.
+      #
+      #   services.mediaServer.liveSportsEpg = {
+      #     enable = true;
+      #     m3uUrlFile = config.sops.secrets.live_sports_m3u_url.path;
+      #   };
+      users.groups.live-sports-epg = lib.mkIf cfg.liveSportsEpg.enable { };
+
+      users.users.live-sports-epg = lib.mkIf cfg.liveSportsEpg.enable {
+        isSystemUser = true;
+        group = "live-sports-epg";
+      };
+
+      # Render M3U_URL into an env file read by the service at startup, so the
+      # (potentially credential-bearing) URL never enters the Nix store.
+      systemd.services.live-sports-epg-env = lib.mkIf cfg.liveSportsEpg.enable {
+        description = "Render live-sports-epg env file from sops secret";
+        requiredBy = [ "live-sports-epg.service" ];
+        before = [ "live-sports-epg.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = ''
+          install -d -m 700 /run/live-sports-epg
+          printf 'M3U_URL=%s\n' "$(cat ${cfg.liveSportsEpg.m3uUrlFile})" > /run/live-sports-epg/env
+          chmod 600 /run/live-sports-epg/env
+        '';
+      };
+
+      systemd.services.live-sports-epg = lib.mkIf cfg.liveSportsEpg.enable {
+        description = "live-sports-epg: XMLTV EPG generator for live-sports M3U streams";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network-online.target" "live-sports-epg-env.service" ];
+        wants = [ "network-online.target" ];
+        requires = [ "live-sports-epg-env.service" ];
+        environment = {
+          OUTPUT_PATH = "/var/lib/live-sports-epg/epg.xml";
+          CACHE_DIR = "/var/cache/live-sports-epg";
+          LISTEN_PORT = toString cfg.liveSportsEpg.listenPort;
+          REFRESH_MINUTES = toString cfg.liveSportsEpg.refreshMinutes;
+          LOOK_AHEAD_DAYS = toString cfg.liveSportsEpg.lookAheadDays;
+          SPORTS = lib.concatStringsSep "," cfg.liveSportsEpg.sports;
+          UPCOMING = if cfg.liveSportsEpg.upcoming then "true" else "false";
+        } // lib.optionalAttrs (cfg.liveSportsEpg.upcomingMaxHours != null) {
+          UPCOMING_MAX_HOURS = toString cfg.liveSportsEpg.upcomingMaxHours;
+        };
+        serviceConfig = {
+          Type = "simple";
+          User = "live-sports-epg";
+          Group = "live-sports-epg";
+          EnvironmentFile = "/run/live-sports-epg/env";
+          ExecStart = "${pkgs.nodejs}/bin/node ${liveSportsEpgSrc}/src/cli.js";
+          Restart = "on-failure";
+          RestartSec = "10s";
+          # Hardening — the service only needs network + its own state/cache dirs.
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          PrivateTmp = true;
+          ReadWritePaths = [ "/var/lib/live-sports-epg" "/var/cache/live-sports-epg" ];
+        };
       };
 
 
@@ -740,7 +886,8 @@ services.caddy = let
       allowedTCPPorts = [ 80 443 ]
         ++ lib.optionals cfg.wizarr.enable [ 5690 ]
         ++ lib.optionals config.services.monitoring.enable [ 3000 9001 ]
-        ++ lib.optionals cfg.dispatcharrMcp.enable [ 8000 ];
+        ++ lib.optionals cfg.dispatcharrMcp.enable [ 8000 ]
+        ++ lib.optionals cfg.liveSportsEpg.enable [ cfg.liveSportsEpg.listenPort ];
     };
 
     ########################################

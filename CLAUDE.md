@@ -221,6 +221,38 @@ When `emby.enable = true` and `emby.apiKeyFile` is set, a Python exporter runs a
 
 A Grafana dashboard **"Emby Sessions"** is auto-provisioned with panels for sessions, transcoding, HW codec stats, and a session table.
 
+### live-sports-epg (dynamic sports XMLTV generator)
+
+`packages/live-sports-epg/` is a standalone Node.js package (pure ESM, no npm dependencies) that turns a dynamic live-sports M3U playlist into XMLTV EPG data for Dispatcharr. It periodically downloads the configured M3U, filters to `Live-Games` entries, matches each stream (e.g. `"Reds @ Cubs-A"`) against ESPN's free public scoreboard API using a curated team-alias table plus fuzzy matching, and writes a valid XMLTV file — served on an HTTP port and/or to disk. Matched-but-not-yet-started games get an "Upcoming:" placeholder programme filling the gap to kickoff so the guide grid never shows a blank slot. See `packages/live-sports-epg/README.md` for the full design and `node --test packages/live-sports-epg/test/` to run its 63 unit/integration tests.
+
+Enabled via `services.mediaServer.liveSportsEpg` in `modules/media-server.nix`. It runs as a plain systemd service (`live-sports-epg.service`, user `live-sports-epg`) — no container — since the package has no compiled dependencies.
+
+**To set up on a new host:**
+
+1. Store the M3U URL in sops (it typically embeds the provider account, so treat it as a secret):
+   ```bash
+   nix develop
+   sops set secrets/secrets.yaml '["live_sports_m3u_url"]' '"https://provider.example/app/<account>"'
+   ```
+2. In the host's `default.nix`, declare the secret and enable the module:
+   ```nix
+   sops.secrets.live_sports_m3u_url = {
+     mode = "0440";
+     owner = "root";
+     group = "root";
+   };
+
+   services.mediaServer.liveSportsEpg = {
+     enable = true;
+     m3uUrlFile = config.sops.secrets.live_sports_m3u_url.path;
+   };
+   ```
+3. Point Dispatcharr's EPG source at `http://127.0.0.1:8098/epg.xml` (default `listenPort`) on the same host.
+
+**Options** (all under `services.mediaServer.liveSportsEpg`): `listenPort` (default `8098`), `refreshMinutes` (default `5`), `lookAheadDays` (default `7`), `sports` (default all supported leagues), `upcoming` (default `true`), `upcomingMaxHours` (default unset = no cap).
+
+Uses one M3U provider per host by design — if a host needs to aggregate multiple sports IPTV providers, wire multiple instances of the systemd service manually rather than extending this module (matches the package's stated single-tenant limitation).
+
 ## Conventions worth knowing
 
 - New module options go under `services.mediaServer.<name>.enable` (and friends) in `modules/media-server.nix`, then implementation in the same file's `config` block. Don't create one-module-per-service unless it's substantial — the existing module is intentionally a single grab-bag.
