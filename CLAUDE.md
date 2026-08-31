@@ -227,14 +227,29 @@ A Grafana dashboard **"Emby Sessions"** is auto-provisioned with panels for sess
 
 Enabled via `services.mediaServer.liveSportsEpg` in `modules/media-server.nix`. It runs as a plain systemd service (`live-sports-epg.service`, user `live-sports-epg`) — no container — since the package has no compiled dependencies.
 
+**Important:** the M3U URL must point at **Dispatcharr's own M3U export**
+(`http://127.0.0.1:9191/output/m3u/<profile>?tvg_id_source=tvg_id`), *not*
+the upstream IPTV provider URL directly. If `live-sports-epg` polls the
+provider independently of Dispatcharr's own M3U refresh, some providers
+throttle/truncate one of the two concurrent requests, and Dispatcharr then
+wipes channel groups thinking the truncated list is authoritative. See the
+"Deploying alongside Dispatcharr" section in
+`packages/live-sports-epg/README.md` for the full explanation.
+
 **To set up on a new host:**
 
-1. Store the M3U URL in sops (it typically embeds the provider account, so treat it as a secret):
+1. In Dispatcharr, create a channel profile (e.g. "Live Games") scoped to
+   just the auto-synced live-game channels, and lower that M3U account's
+   `refresh_interval` to something reasonably fast (e.g. 15 minutes) since
+   it's now the floor on how quickly new games get discovered/EPG'd.
+2. Store the resulting URL in sops (loopback-only, no credentials, but
+   kept as a secret for tamper-resistance):
    ```bash
    nix develop
-   sops set secrets/secrets.yaml '["live_sports_m3u_url"]' '"https://provider.example/app/<account>"'
+   sops set secrets/secrets.yaml '["live_sports_m3u_url"]' \
+     '"http://127.0.0.1:9191/output/m3u/Live%20Games?tvg_id_source=tvg_id"'
    ```
-2. In the host's `default.nix`, declare the secret and enable the module:
+3. In the host's `default.nix`, declare the secret and enable the module:
    ```nix
    sops.secrets.live_sports_m3u_url = {
      mode = "0440";
@@ -247,7 +262,7 @@ Enabled via `services.mediaServer.liveSportsEpg` in `modules/media-server.nix`. 
      m3uUrlFile = config.sops.secrets.live_sports_m3u_url.path;
    };
    ```
-3. Point Dispatcharr's EPG source at `http://127.0.0.1:8098/epg.xml` (default `listenPort`) on the same host.
+4. Point Dispatcharr's EPG source at `http://127.0.0.1:8098/epg.xml` (default `listenPort`) on the same host.
 
 **Options** (all under `services.mediaServer.liveSportsEpg`): `listenPort` (default `8098`), `refreshMinutes` (default `5`), `lookAheadDays` (default `7`), `sports` (default all supported leagues), `upcoming` (default `true`), `upcomingMaxHours` (default unset = no cap).
 

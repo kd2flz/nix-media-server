@@ -58,7 +58,7 @@ environment variables:
 
 | Key | Default | Notes |
 | --- | --- | --- |
-| `m3uUrl` / `M3U_URL` | (required) | Source M3U playlist |
+| `m3uUrl` / `M3U_URL` | (required) | Source M3U playlist — point this at Dispatcharr's own `/output/m3u/<profile>?tvg_id_source=tvg_id` output (see "Deploying alongside Dispatcharr" below), not the upstream IPTV provider directly |
 | `outputPath` / `OUTPUT_PATH` | `/var/lib/live-sports-epg/epg.xml` | Where to write XMLTV |
 | `refreshMinutes` / `REFRESH_MINUTES` | `5` | M3U + schedule refresh interval |
 | `lookAheadDays` / `LOOK_AHEAD_DAYS` | `7` | How many days of ESPN data to fetch |
@@ -98,6 +98,41 @@ node --test test/
 3. Add a default duration in `src/schedules/espn.js`'s
    `DEFAULT_DURATIONS_MINUTES`.
 4. Add test fixtures and a unit test under `test/`.
+
+## Deploying alongside Dispatcharr
+
+Point `m3uUrl` at **Dispatcharr's own M3U export**, not the upstream IPTV
+provider URL, e.g.:
+
+```
+http://127.0.0.1:9191/output/m3u/Live%20Games?tvg_id_source=tvg_id
+```
+
+Why:
+
+* Dispatcharr already polls the provider on its own schedule (per M3U
+  account `refresh_interval`). If `live-sports-epg` *also* polls the
+  provider independently, some providers throttle/serve a truncated
+  response to one of the two concurrent requests — Dispatcharr then treats
+  that truncated list as authoritative and wipes channel groups until the
+  next successful refresh. Reading from Dispatcharr's own output instead
+  of the provider eliminates the double-poll entirely.
+* `Live%20Games` is the URL-encoded name of a Dispatcharr **channel
+  profile** scoped to just the live-game channels (so the export doesn't
+  include hundreds of unrelated channels). Create one via *Channel
+  Profiles* in the Dispatcharr UI containing only the auto-synced
+  live-game channel group.
+* `?tvg_id_source=tvg_id` is required — without it Dispatcharr's M3U
+  export uses the channel *number* as `tvg-id`, not the provider's
+  original tvg-id (e.g. `"Reds @ Cubs-A"`) that the matcher parses.
+* The endpoint requires no authentication; it's protected by Dispatcharr's
+  M3U/EPG network ACL, which defaults to private/loopback networks only
+  (`127.0.0.0/8`, `10.0.0.0/8`, etc.) — safe for a same-host service, not
+  reachable from the public internet by default.
+* With this in place, Dispatcharr's own M3U account `refresh_interval`
+  becomes the effective floor on how quickly new games are discovered —
+  set it low enough (e.g. 15 minutes) that live games and their EPG data
+  appear promptly.
 
 ## Limitations
 

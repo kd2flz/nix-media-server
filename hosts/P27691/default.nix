@@ -45,7 +45,14 @@
     group = "root";
   };
 
-  # Live-sports M3U source URL (embeds the provider account) for live-sports-epg.
+  # live-sports-epg reads Dispatcharr's own M3U output (the "Live Games"
+  # channel profile) rather than polling the upstream IPTV provider directly.
+  # This avoids two independent pollers hitting the provider concurrently,
+  # which previously caused Dispatcharr's M3U refresh to occasionally get a
+  # truncated response and wipe channel groups. Loopback-only endpoint, no
+  # credentials involved, but kept as a secret for consistency /
+  # tamper-resistance (the URL/query string is an implementation detail we
+  # don't want casually edited outside of sops review).
   sops.secrets.live_sports_m3u_url = {
     mode = "0440";
     owner = "root";
