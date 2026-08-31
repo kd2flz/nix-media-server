@@ -45,6 +45,13 @@
     group = "root";
   };
 
+  # Live-sports M3U source URL (embeds the provider account) for live-sports-epg.
+  sops.secrets.live_sports_m3u_url = {
+    mode = "0440";
+    owner = "root";
+    group = "root";
+  };
+
   services.monitoring.enable = true;
 
   services.mediaServer = {
@@ -77,6 +84,10 @@
     dispatcharr.enable    = true;
     dispatcharrMcp.enable = true;
     dispatcharrMcp.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
+
+    liveSportsEpg.enable      = true;
+    liveSportsEpg.m3uUrlFile  = config.sops.secrets.live_sports_m3u_url.path;
+
     samba.enable          = true;
     nanitor.enable        = true;
 
