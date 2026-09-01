@@ -34,13 +34,78 @@ describe('esc', () => {
 
 describe('renderChannel', () => {
   it('renders with the exact tvg-id as id', () => {
-    const xml = renderChannel('Reds @ Cubs-A', 'Reds @ Cubs-A');
+    const xml = renderChannel('Reds @ Cubs-A', 'Reds @ Cubs-A', null);
     assert.match(xml, /<channel id="Reds @ Cubs-A">/);
     assert.match(xml, /<display-name lang="en">Reds @ Cubs-A<\/display-name>/);
   });
+
+  it('includes an icon when tvgLogo is provided', () => {
+    const xml = renderChannel('Reds @ Cubs-A', 'Reds @ Cubs-A', 'https://example.com/logo.png');
+    assert.match(xml, /<icon src="https:\/\/example.com\/logo.png"\/>/);
+  });
+
   it('escapes special characters in display name', () => {
-    const xml = renderChannel('X & Y', 'X & Y');
+    const xml = renderChannel('X & Y', 'X & Y', null);
     assert.match(xml, /<display-name lang="en">X &amp; Y<\/display-name>/);
+  });
+});
+
+describe('renderProgramme', () => {
+  const match = {
+    event: {
+      id: '1', sport: { key: 'MLB', label: 'MLB' }, league: 'MLB',
+      startTime: '2026-08-30T22:50:00Z', endTime: '2026-08-31T02:00:00Z',
+      away: { name: 'Cincinnati Reds', abbreviation: 'CIN', logo: 'https://away.logo.png' },
+      home: { name: 'Chicago Cubs', abbreviation: 'CHC', logo: 'https://home.logo.png' },
+      status: { state: 'pre', detail: '' },
+      venue: null, broadcasts: [],
+    },
+    variant: 'A', confidence: 1, reason: {},
+  };
+
+  it('includes away team logo for -A variant', () => {
+    const xml = renderProgramme({ tvgId: 'Reds @ Cubs-A' }, match, {
+      startDate: new Date('2026-08-30T22:50:00Z'),
+      endDate: new Date('2026-08-31T02:00:00Z'),
+    });
+    assert.match(xml, /<icon src="https:\/\/away.logo.png"\/>/);
+  });
+
+  it('includes home team logo for -H variant', () => {
+    const homeMatch = { ...match, variant: 'H' };
+    const xml = renderProgramme({ tvgId: 'Reds @ Cubs-H' }, homeMatch, {
+      startDate: new Date('2026-08-30T22:50:00Z'),
+      endDate: new Date('2026-08-31T02:00:00Z'),
+    });
+    assert.match(xml, /<icon src="https:\/\/home.logo.png"\/>/);
+  });
+
+  it('appends variant label to title', () => {
+    const xml = renderProgramme({ tvgId: 'Reds @ Cubs-A' }, match, {
+      startDate: new Date('2026-08-30T22:50:00Z'),
+      endDate: new Date('2026-08-31T02:00:00Z'),
+    });
+    assert.match(xml, /<title lang="en">Cincinnati Reds at Chicago Cubs \(Away Broadcast\)<\/title>/);
+    assert.match(xml, /<title lang="en-short">CIN @ CHC \(Away Broadcast\)<\/title>/);
+  });
+
+  it('includes sub-title for variant', () => {
+    const xml = renderProgramme({ tvgId: 'Reds @ Cubs-A' }, match, {
+      startDate: new Date('2026-08-30T22:50:00Z'),
+      endDate: new Date('2026-08-31T02:00:00Z'),
+    });
+    assert.match(xml, /<sub-title lang="en">Away Broadcast<\/sub-title>/);
+  });
+
+  it('defaults to home team logo and no variant label if no variant', () => {
+    const noVariantMatch = { ...match, variant: null };
+    const xml = renderProgramme({ tvgId: 'Reds @ Cubs' }, noVariantMatch, {
+      startDate: new Date('2026-08-30T22:50:00Z'),
+      endDate: new Date('2026-08-31T02:00:00Z'),
+    });
+    assert.match(xml, /<icon src="https:\/\/home.logo.png"\/>/);
+    assert.doesNotMatch(xml, /Away Broadcast|Home Broadcast/);
+    assert.doesNotMatch(xml, /<sub-title/);
   });
 });
 
@@ -60,22 +125,40 @@ describe('renderUpcomingProgramme', () => {
     event: {
       id: '1', sport: { key: 'MLB', label: 'MLB' }, league: 'MLB',
       startTime: '2026-08-30T22:50:00Z', endTime: null,
-      away: { name: 'Cincinnati Reds', abbreviation: 'CIN' },
-      home: { name: 'Chicago Cubs', abbreviation: 'CHC' },
+      away: { name: 'Cincinnati Reds', abbreviation: 'CIN', logo: 'https://away.logo.png' },
+      home: { name: 'Chicago Cubs', abbreviation: 'CHC', logo: 'https://home.logo.png' },
       status: { state: 'pre', detail: '' },
       venue: null, broadcasts: [],
     },
-    variant: 'A', confidence: 1, reason: {},
+    variant: 'H', confidence: 1, reason: {},
   };
 
-  it('prefixes the title with "Upcoming:"', () => {
+  it('prefixes the title with "Upcoming:" and appends variant label', () => {
     const xml = renderUpcomingProgramme(
-      { tvgId: 'Reds @ Cubs-A' },
+      { tvgId: 'Reds @ Cubs-H' },
       match,
       { startDate: new Date('2026-08-30T20:00:00Z'), endDate: new Date('2026-08-30T22:50:00Z') },
     );
-    assert.match(xml, /<title lang="en">Upcoming: Cincinnati Reds at Chicago Cubs<\/title>/);
-    assert.match(xml, /<title lang="en-short">Upcoming: CIN @ CHC<\/title>/);
+    assert.match(xml, /<title lang="en">Upcoming: Cincinnati Reds at Chicago Cubs \(Home Broadcast\)<\/title>/);
+    assert.match(xml, /<title lang="en-short">Upcoming: CIN @ CHC \(Home Broadcast\)<\/title>/);
+  });
+
+  it('includes sub-title for variant in upcoming programme', () => {
+    const xml = renderUpcomingProgramme(
+      { tvgId: 'Reds @ Cubs-H' },
+      match,
+      { startDate: new Date('2026-08-30T20:00:00Z'), endDate: new Date('2026-08-30T22:50:00Z') },
+    );
+    assert.match(xml, /<sub-title lang="en">Home Broadcast<\/sub-title>/);
+  });
+
+  it('includes team logo for variant in upcoming programme', () => {
+    const xml = renderUpcomingProgramme(
+      { tvgId: 'Reds @ Cubs-H' },
+      match,
+      { startDate: new Date('2026-08-30T20:00:00Z'), endDate: new Date('2026-08-30T22:50:00Z') },
+    );
+    assert.match(xml, /<icon src="https:\/\/home.logo.png"\/>/);
   });
 
   it('uses the tvg-id verbatim as channel', () => {

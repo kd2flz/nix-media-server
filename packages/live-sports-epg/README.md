@@ -21,6 +21,8 @@ other XMLTV-compatible IPTV client.
    live (see `upcoming` config below).
 6. Writes a valid XMLTV file to the configured path and (optionally)
    serves it on an HTTP port so Dispatcharr can pull it.
+7. Emits appropriate team logos (home team for home feed, away team for away feed) for both the `<channel>` and `<programme>` elements in the XMLTV, using direct URLs from ESPN's API.
+8. Appends the broadcast feed type (e.g. `(Away Broadcast)`) to programme titles and includes a dedicated `<sub-title>` element to clarify `"-A"` / `"-H"` variants.
 
 ## How matching works
 
