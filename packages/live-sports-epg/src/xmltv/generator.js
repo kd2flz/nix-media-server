@@ -49,19 +49,68 @@ export function computeEnd(start, event, defaults) {
 }
 
 /**
+ * Providers commonly publish two streams for the same matchup — one per
+ * broadcast market ("-A" for the away team's regional feed, "-H" for the
+ * home team's). `splitVariant()` (matching/normalize.js) already extracts
+ * this as `match.variant`; these helpers turn it into a human label and
+ * pick which team's logo/identity represents *this specific* channel.
+ *
+ * Per convention: away feed → away team, home feed (or no variant, i.e. a
+ * single combined stream) → home team.
+ */
+function feedTeam(event, variant) {
+  return variant === 'A' ? event.away : event.home;
+}
+
+function feedLabel(variant) {
+  if (variant === 'A') return 'Away Broadcast';
+  if (variant === 'H') return 'Home Broadcast';
+  return null;
+}
+
+/**
  * Build the <title> for a programme. Multi-language <title> elements are
  * allowed in XMLTV; we emit the canonical English one plus the
  * sport-specific variant so IPTV clients that prefer short titles can
- * pick.
+ * pick. `variant` ('A'/'H'/null — see feedLabel above) is appended as a
+ * suffix so the two feeds of the same matchup are distinguishable in a
+ * guide grid, since the channel name alone (which does carry -A/-H) often
+ * isn't shown next to the programme title.
  */
-function titleElements(event) {
-  const main = `${event.away.name} at ${event.home.name}`;
-  const short = `${event.away.abbreviation || event.away.name} @ ${event.home.abbreviation || event.home.name}`;
+function titleElements(event, variant) {
+  const label = feedLabel(variant);
+  const suffix = label ? ` (${label})` : '';
+  const main = `${event.away.name} at ${event.home.name}${suffix}`;
+  const short = `${event.away.abbreviation || event.away.name} @ ${event.home.abbreviation || event.home.name}${suffix}`;
   return [
     `<title lang="en">${esc(main)}</title>`,
     `<title lang="en-short">${esc(short)}</title>`,
   ].join('');
 }
+
+/**
+ * Build a <sub-title> naming the broadcast feed, when known. Kept separate
+ * from <title> too since some IPTV clients render sub-title on its own
+ * line — belt-and-suspenders for the away/home distinction.
+ */
+function subTitleElement(variant) {
+  const label = feedLabel(variant);
+   return label ? `<sub-title lang="en">${esc(label)}</sub-title>` : '';
+ }
+ 
+ /**
+  * Build an <icon> element based on the programme's associated team logo and
+  * stream variant. The IPTV client typically renders this as a channel logo
+  * or as a small badge next to the programme title in the guide. The URL is
+  * directly from ESPN's scoreboard API — safe, public, no auth needed.
+  */
+ function iconElement(event, variant) {
+   const team = feedTeam(event, variant);
+   if (team?.logo) {
+     return `<icon src="${esc(team.logo)}"/>`;
+   }
+   return '';
+ }
 
 /**
  * Build a <desc> for a programme. Includes sport, league, venue, and
@@ -95,16 +144,19 @@ function categoryElements(event) {
 /**
  * Render a single matched entry (a stream + a matched event) as an XMLTV
  * <programme>. The `channel` attribute MUST be the M3U tvg-id verbatim —
- * this is the contract between EPG and the M3U feed.
+ * this is the contract between EPG and the M3U feed. Also includes the
+ * appropriate team logo and feed variant labels.
  */
 export function renderProgramme(entry, match, { startDate, endDate }) {
   const chId = esc(entry.tvgId);
+  const variant = match.variant;
   return [
     `<programme start="${xmltvDate(startDate)}" stop="${xmltvDate(endDate)}" channel="${chId}">`,
-    `  ${titleElements(match.event)}`,
+    `  ${titleElements(match.event, variant)}`,
+    `  ${subTitleElement(variant)}`,
     `  ${descElement(match.event)}`,
     `  ${categoryElements(match.event)}`,
-    '  <icon src=""/>',
+    `  ${iconElement(match.event, variant)}`,
     '  <country>USA</country>',
     match.event.status?.state === 'in' ? '  <live />' : '',
     '  <premiere />',
@@ -129,7 +181,7 @@ export function renderUnmatchedProgramme(tvgId, tvgName, { startDate, endDate })
     '  <category lang="en">Sports</category>',
     '  <live />',
     '</programme>',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 /**
@@ -143,8 +195,11 @@ export function renderUnmatchedProgramme(tvgId, tvgName, { startDate, endDate })
 export function renderUpcomingProgramme(entry, match, { startDate, endDate }) {
   const chId = esc(entry.tvgId);
   const event = match.event;
-  const main = `Upcoming: ${event.away.name} at ${event.home.name}`;
-  const short = `Upcoming: ${event.away.abbreviation || event.away.name} @ ${event.home.abbreviation || event.home.name}`;
+  const variant = match.variant;
+  const label = feedLabel(variant);
+  const suffix = label ? ` (${label})` : '';
+  const main = `Upcoming: ${event.away.name} at ${event.home.name}${suffix}`;
+  const short = `Upcoming: ${event.away.abbreviation || event.away.name} @ ${event.home.abbreviation || event.home.name}${suffix}`;
   const lines = [];
   if (event.league) lines.push(`League: ${event.league}`);
   if (event.sport?.label) lines.push(`Sport: ${event.sport.label}`);
@@ -157,23 +212,28 @@ export function renderUpcomingProgramme(entry, match, { startDate, endDate }) {
   return [
     `<programme start="${xmltvDate(startDate)}" stop="${xmltvDate(endDate)}" channel="${chId}">`,
     `  <title lang="en">${esc(main)}</title><title lang="en-short">${esc(short)}</title>`,
+    `  ${subTitleElement(variant)}`,
     `  <desc lang="en">${esc(lines.join('\n'))}</desc>`,
     `  ${categoryElements(event)}`,
+    `  ${iconElement(event, variant)}`,
     '</programme>',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 /**
  * Render a <channel> element. We always emit one for every M3U tvg-id so
  * Dispatcharr and other clients see the channel even if we have no
- * schedule data.
+ * schedule data. The `tvgLogo` (from the M3U) is emitted as an <icon>
+ * element, which many IPTV clients use to display a channel logo.
  */
-export function renderChannel(tvgId, tvgName) {
-  return [
+export function renderChannel(tvgId, tvgName, tvgLogo) {
+  const parts = [
     `<channel id="${esc(tvgId)}">`,
     `  <display-name lang="en">${esc(tvgName || tvgId)}</display-name>`,
-    '</channel>',
-  ].join('\n');
+  ];
+  if (tvgLogo) parts.push(`  <icon src="${esc(tvgLogo)}"/>`);
+  parts.push('</channel>');
+  return parts.join('\n');
 }
 
 /**
@@ -199,7 +259,7 @@ export function renderXmltv(entries, matches, opts = {}) {
   const upcomingEnabled = opts.upcoming !== false;
 
   const channelsXml = entries
-    .map((e) => renderChannel(e.tvgId, e.tvgName || e.name))
+    .map((e) => renderChannel(e.tvgId, e.tvgName || e.name, e.tvgLogo))
     .join('\n');
 
   const programmesXml = entries

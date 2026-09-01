@@ -44,11 +44,17 @@ async function fetchJson(url, { timeoutMs = DEFAULT_TIMEOUT_MS, retries = 1, fet
  * and only partially stable; we only pull what we need.
  *
  *   { id, sport, league, startTime, endTime,
- *     away: { id, name, abbreviation, score },
- *     home: { id, name, abbreviation, score },
+ *     away: { id, name, abbreviation, score, logo },
+ *     home: { id, name, abbreviation, score, logo },
  *     status: { state, detail, period, clock },
  *     venue: { name, city, state },
  *     broadcasts: [...] }
+ *
+ * `logo` is ESPN's team badge image URL (e.g.
+ * "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/atl.png") — stable,
+ * no auth required. Used to pick a per-channel <icon> in the XMLTV output
+ * (see xmltv/generator.js: home feed → home team logo, away feed → away
+ * team logo).
  */
 function shapeEvent(raw, sport) {
   const comp = raw.competitions?.[0] || {};
@@ -83,12 +89,14 @@ function shapeEvent(raw, sport) {
       name: away.team?.displayName || away.team?.name || '',
       abbreviation: away.team?.abbreviation || '',
       score: away.score,
+      logo: away.team?.logo || '',
     },
     home: {
       id: home.team?.id,
       name: home.team?.displayName || home.team?.name || '',
       abbreviation: home.team?.abbreviation || '',
       score: home.score,
+      logo: home.team?.logo || '',
     },
     venue: comp.venue
       ? {
