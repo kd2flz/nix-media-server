@@ -92,6 +92,10 @@ in
       })
     ];
 
+    # Add llmfit when Ollama is enabled
+    environment.systemPackages = with pkgs;
+      (lib.optionals cfg.ollamaServer.enable [ llmfit ]);
+
     services.ollama = {
       enable = true;
       host = cfg.host;
