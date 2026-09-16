@@ -118,7 +118,7 @@
     models       = [ "phi4-mini" "qwen3-coder" ];
   };
 
-  # Monthly integrity check across both RAID1 SSDs
+# Monthly integrity check across both RAID1 SSDs
   services.btrfs.autoScrub = {
     enable      = true;
     interval    = "monthly";
