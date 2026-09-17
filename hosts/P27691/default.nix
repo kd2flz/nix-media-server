@@ -115,7 +115,7 @@
   services.ollamaServer = {
     enable       = true;
     acceleration = "cuda";
-    models       = [ "phi4-mini" "qwen3-coder" ];
+    models       = [ "hf.co/hesamation/Qwen3.6-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-GGUF:Q4_K_M" ];
   };
 
 # Monthly integrity check across both RAID1 SSDs
