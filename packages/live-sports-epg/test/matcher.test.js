@@ -143,4 +143,20 @@ describe('matchStream', () => {
     const r = matchStream('garbage-no-teams', sampleEvents);
     assert.equal(r.matched, false);
   });
+
+  it('picks the right game of a multi-day series', () => {
+    const game = (id, startTime, state) => ({
+      ...sampleEvents[0], id, startTime, status: { state },
+    });
+    const series = [
+      game('fri', '2026-08-28T23:05:00Z', 'post'),
+      game('sat', '2026-08-29T23:05:00Z', 'pre'),
+      game('sun', '2026-08-30T18:05:00Z', 'pre'),
+    ];
+    const at = (iso) => matchStream('Reds @ Cubs-A', series, { now: new Date(iso) }).event.id;
+    assert.equal(at('2026-08-29T12:00:00Z'), 'sat');        // before Saturday's game
+    assert.equal(at('2026-08-30T00:30:00Z'), 'sat');        // Saturday's game in progress (stale 'pre')
+    assert.equal(at('2026-08-30T12:00:00Z'), 'sun');
+    assert.equal(at('2026-09-01T12:00:00Z'), 'sun');        // series over → most recent
+  });
 });

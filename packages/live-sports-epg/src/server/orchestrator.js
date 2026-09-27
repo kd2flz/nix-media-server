@@ -64,7 +64,8 @@ export class EpgService {
         try {
           const { events: fresh, failures: esf } = await fetchAllEvents({
             sports: [sport],
-            fetchTimeoutMs: this.cfg.fetchTimeoutMs,
+            dates,
+            timeoutMs: this.cfg.fetchTimeoutMs,
             retries: this.cfg.fetchRetries,
           });
           events = fresh;
@@ -125,8 +126,9 @@ export class EpgService {
       if (!seen.has(key)) await this.cache.delete('streams', key);
     }
 
-    // Load schedule for the look-ahead window.
-    const dates = ymdRange(new Date(), this.cfg.lookAheadDays);
+    // Start a day early: ESPN buckets by US-Eastern day, and late games
+    // still in progress belong to "yesterday".
+    const dates = ymdRange(new Date(Date.now() - 24 * 60 * 60_000), this.cfg.lookAheadDays + 1);
     const { events, failures } = await this._loadSchedule(this.cfg.sports, dates);
     stats.scheduleEvents = events.length;
     stats.scheduleFailures = failures;
@@ -137,7 +139,7 @@ export class EpgService {
     const matches = new Map();
     const sportByName = {};
     for (const entry of liveEntries) {
-      const m = matchStream(entry.tvgId, events);
+      const m = matchStream(entry.tvgId, events, { now: new Date() });
       if (m.matched && m.confidence >= 0.5) {
         matches.set(entry.tvgId, { entry, match: m, sport: m.event.sport?.key });
         stats.matched++;
