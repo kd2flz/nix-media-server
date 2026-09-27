@@ -13,6 +13,7 @@ export const SPORTS = {
   LIGUE_1: { espnSlug: 'soccer/fra.1', label: 'Ligue 1' },
   MLS: { espnSlug: 'soccer/usa.1', label: 'MLS' },
   WC: { espnSlug: 'soccer/fifa.world', label: 'World Cup' },
-  NCAAF: { espnSlug: 'football/college-football', label: 'NCAAF' },
-  NCAAB: { espnSlug: 'basketball/mens-college-basketball', label: 'NCAAB' },
+  // Without `groups`, ESPN's college scoreboards return only Top-25 games.
+  NCAAF: { espnSlug: 'football/college-football', label: 'NCAAF', query: 'groups=80' },
+  NCAAB: { espnSlug: 'basketball/mens-college-basketball', label: 'NCAAB', query: 'groups=50' },
 };

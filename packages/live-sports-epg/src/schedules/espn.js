@@ -6,12 +6,15 @@ const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports';
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 /**
- * Build the ESPN scoreboard URL for a given sport. `date` is a YYYYMMDD string
- * in UTC; if omitted, ESPN returns "today + next few days" (default behavior).
+ * Build the ESPN scoreboard URL for a given sport. `date` is a single YYYYMMDD
+ * day (ESPN rejects ranges with HTTP 400); if omitted, ESPN returns only its
+ * "current" slate (today for MLB/NHL, this week for NFL).
  */
-function urlFor(espnSlug, date) {
-  const base = `${ESPN_BASE}/${espnSlug}/scoreboard`;
-  return date ? `${base}?dates=${date}` : base;
+function urlFor(espnSlug, date, query) {
+  const params = ['limit=500'];
+  if (query) params.push(query);
+  if (date) params.push(`dates=${date}`);
+  return `${ESPN_BASE}/${espnSlug}/scoreboard?${params.join('&')}`;
 }
 
 /**
@@ -128,32 +131,31 @@ export async function fetchAllEvents({
   const events = [];
   const failures = [];
 
-  // ESPN's scoreboard endpoint returns ~14 days of games; we call once per
-  // sport and filter by date. If `dates` is empty we take whatever ESPN
-  // returns and let the caller filter.
+  // One request per sport per day: ESPN's default scoreboard only covers the
+  // current slate, and date ranges are rejected. A failed day is non-fatal.
   for (const key of sports) {
     const sport = SPORTS[key];
     if (!sport) {
       failures.push({ sport: key, error: 'unknown sport' });
       continue;
     }
-    try {
-      const url = urlFor(sport.espnSlug);
-      const data = await fetchJson(url, { fetchImpl, timeoutMs, retries });
-      const raw = Array.isArray(data?.events) ? data.events : [];
-      for (const r of raw) {
-        const ev = shapeEvent(r, sport);
-        if (!ev) continue;
-        if (dates.length > 0) {
-          const ymd = (ev.startTime || '').slice(0, 10).replace(/-/g, '');
-          if (!dates.includes(ymd)) continue;
+    const seen = new Set();
+    for (const date of dates.length > 0 ? dates : [undefined]) {
+      try {
+        const url = urlFor(sport.espnSlug, date, sport.query);
+        const data = await fetchJson(url, { fetchImpl, timeoutMs, retries });
+        const raw = Array.isArray(data?.events) ? data.events : [];
+        for (const r of raw) {
+          const ev = shapeEvent(r, sport);
+          if (!ev || seen.has(ev.id)) continue;
+          seen.add(ev.id);
+          events.push(ev);
         }
-        events.push(ev);
+      } catch (err) {
+        failures.push({ sport: key, date, error: err.message });
       }
-      if (onProgress) onProgress({ sport: key, count: events.length });
-    } catch (err) {
-      failures.push({ sport: key, error: err.message });
     }
+    if (onProgress) onProgress({ sport: key, count: events.length });
   }
 
   return {

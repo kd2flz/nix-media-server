@@ -70,6 +70,21 @@ function similarity(a, b) {
 }
 
 /**
+ * Lower is better. Series/rematches produce several events with the same
+ * teams: prefer one likely in progress, then the soonest upcoming, then the
+ * most recently started. Time-based because cached ESPN status can be stale.
+ */
+const LIKELY_LIVE_MS = 5 * 60 * 60_000;
+function timeRank(ev, now) {
+  const start = Date.parse(ev.startTime);
+  if (Number.isNaN(start)) return Number.MAX_SAFE_INTEGER;
+  const delta = start - now.getTime();
+  if (delta <= 0 && -delta < LIKELY_LIVE_MS && ev.status?.state !== 'post') return -delta;
+  if (delta > 0) return 1e13 + delta;
+  return 2e13 - delta;
+}
+
+/**
  * Match a single live-game stream (tvgId) against an array of schedule events.
  * Each event is { id, sport, league, startTime, endTime, away: { name, ... },
  *                  home: { name, ... }, venue, status, ... }.
@@ -81,7 +96,7 @@ function similarity(a, b) {
  * Confidence is in [0, 1]. Anything ≥ 0.7 is considered a real match;
  * 0.5–0.7 is a soft match; < 0.5 is no match.
  */
-export function matchStream(tvgId, events) {
+export function matchStream(tvgId, events, { now = new Date() } = {}) {
   const reason = { tvgId };
   if (!tvgId) return { matched: false, reason: { ...reason, error: 'empty tvgId' } };
   if (!Array.isArray(events) || events.length === 0) {
@@ -111,8 +126,9 @@ export function matchStream(tvgId, events) {
     const awayScore = similarity(awayCanon, evAway);
     const homeScore = similarity(homeCanon, evHome);
     const score = (awayScore + homeScore) / 2;
-    if (!best || score > best.confidence) {
-      best = { event: ev, confidence: score, swapped, reason: { awayCanon, homeCanon } };
+    const rank = timeRank(ev, now);
+    if (!best || score > best.confidence || (score === best.confidence && rank < best.rank)) {
+      best = { event: ev, confidence: score, rank, swapped, reason: { awayCanon, homeCanon } };
     }
   }
 

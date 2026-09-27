@@ -138,8 +138,11 @@ Why:
 
 ## Limitations
 
-* The ESPN scoreboard endpoint only returns events the day-of and the
-  next ~12 days. Anything further out will be emitted as "unmatched".
+* ESPN's scoreboard endpoint returns only the "current" slate by default
+  and rejects date ranges, so the service makes one request per sport per
+  day (yesterday through `LOOK_AHEAD_DAYS`), cached for 2 hours. College
+  scoreboards need a `groups` filter (set in `src/types/sports.js`) or ESPN
+  returns only Top-25 games.
 * Some providers rotate stream URLs aggressively. If the M3U
   `tvg-id` itself changes, the matcher won't carry the schedule
   entry over — by design, since the M3U is the source of truth.
