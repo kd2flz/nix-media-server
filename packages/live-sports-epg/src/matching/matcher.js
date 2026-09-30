@@ -123,12 +123,14 @@ export function matchStream(tvgId, events, { now = new Date() } = {}) {
     const swapped = awayCanon === evHome && homeCanon === evAway;
     if (!sameSide && !swapped) continue;
 
-    const awayScore = similarity(awayCanon, evAway);
-    const homeScore = similarity(homeCanon, evHome);
+    // Score against the orientation that actually matched, otherwise a
+    // swapped pair scores ~0 and gets rejected by the caller's threshold.
+    const awayScore = similarity(awayCanon, sameSide ? evAway : evHome);
+    const homeScore = similarity(homeCanon, sameSide ? evHome : evAway);
     const score = (awayScore + homeScore) / 2;
     const rank = timeRank(ev, now);
     if (!best || score > best.confidence || (score === best.confidence && rank < best.rank)) {
-      best = { event: ev, confidence: score, rank, swapped, reason: { awayCanon, homeCanon } };
+      best = { event: ev, confidence: score, rank, swapped: !sameSide, reason: { awayCanon, homeCanon } };
     }
   }
 
