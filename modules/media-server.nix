@@ -165,6 +165,15 @@ in
       '';
     };
 
+    liveSportsEpg.logLevel = lib.mkOption {
+      type = lib.types.enum [ "debug" "info" "warn" "error" ];
+      default = "info";
+      description = ''
+        Log verbosity. Set to "debug" to log the per-stream reason every
+        unmatched live-game channel failed to match an ESPN event.
+      '';
+    };
+
     samba.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -737,6 +746,7 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
           LOOK_AHEAD_DAYS = toString cfg.liveSportsEpg.lookAheadDays;
           SPORTS = lib.concatStringsSep "," cfg.liveSportsEpg.sports;
           UPCOMING = if cfg.liveSportsEpg.upcoming then "true" else "false";
+          LOG_LEVEL = cfg.liveSportsEpg.logLevel;
         } // lib.optionalAttrs (cfg.liveSportsEpg.upcomingMaxHours != null) {
           UPCOMING_MAX_HOURS = toString cfg.liveSportsEpg.upcomingMaxHours;
         };

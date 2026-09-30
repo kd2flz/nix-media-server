@@ -10,11 +10,17 @@ function threshold() {
   return LEVELS[(process.env.LOG_LEVEL || 'info').toLowerCase()] || LEVELS.info;
 }
 
+function fmt(v) {
+  if (typeof v === 'string') return JSON.stringify(v);
+  if (v !== null && typeof v === 'object') return JSON.stringify(v);
+  return v;
+}
+
 function emit(level, msg, fields) {
   if (LEVELS[level] < threshold()) return;
   const stamp = new Date().toISOString();
   const tail = fields ? ' ' + Object.entries(fields)
-    .map(([k, v]) => `${k}=${typeof v === 'string' ? JSON.stringify(v) : v}`)
+    .map(([k, v]) => `${k}=${fmt(v)}`)
     .join(' ') : '';
   const line = `${stamp} ${level} ${msg}${tail}`;
   if (level === 'error') process.stderr.write(line + '\n');

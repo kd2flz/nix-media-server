@@ -134,6 +134,22 @@ describe('matchStream', () => {
     assert.equal(r.matched, false);
   });
 
+  it('scores a home/away-swapped pair with full confidence', () => {
+    // The M3U labels the feed "Cubs @ Reds" while ESPN has Reds @ Cubs.
+    // Confidence must stay above the caller's 0.5 acceptance threshold.
+    const r = matchStream('Cubs @ Reds-A', sampleEvents);
+    assert.equal(r.matched, true);
+    assert.equal(r.event.id, '1');
+    assert.equal(r.swapped, true);
+    assert.equal(r.confidence, 1);
+  });
+
+  it('reports swapped:false for a same-side match', () => {
+    const r = matchStream('Reds @ Cubs-A', sampleEvents);
+    assert.equal(r.swapped, false);
+    assert.equal(r.confidence, 1);
+  });
+
   it('returns matched:false when no candidate matches', () => {
     const r = matchStream('Unknown Team A @ Unknown Team B-A', sampleEvents);
     assert.equal(r.matched, false);
