@@ -92,8 +92,12 @@
     dispatcharrMcp.enable = true;
     dispatcharrMcp.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
 
+    dispatcharr.epgAutoMatch.enable = true;
+    dispatcharr.epgAutoMatch.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
+
     liveSportsEpg.enable      = true;
     liveSportsEpg.m3uUrlFile  = config.sops.secrets.live_sports_m3u_url.path;
+    liveSportsEpg.logLevel    = "debug";
 
     samba.enable          = true;
     nanitor.enable        = true;

@@ -100,6 +100,40 @@ in
       '';
     };
 
+    dispatcharr.epgAutoMatch.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Periodically POST to Dispatcharr's /api/channels/channels/match-epg/
+        so auto-created channels (e.g. the dynamic Live-Games entries) pick up
+        EPG data without someone clicking "EPG Auto Match" in the UI.
+
+        The request sends an empty body, which Dispatcharr scopes to channels
+        that have no EPG record yet -- existing mappings, including ones
+        corrected by hand, are left alone.
+      '';
+    };
+
+    dispatcharr.epgAutoMatch.apiKeyFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = ''
+        Path to a file containing a Dispatcharr API key, sent as the X-API-Key
+        header. The same key used for dispatcharrMcp is fine -- point this at
+        config.sops.secrets.dispatcharr_mcp_api_key.path.
+      '';
+      example = lib.literalExpression "config.sops.secrets.dispatcharr_mcp_api_key.path";
+    };
+
+    dispatcharr.epgAutoMatch.intervalMinutes = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 15;
+      description = ''
+        How often to run the auto-match. Keep this at or below the M3U account's
+        refresh interval, otherwise new live-game channels sit without EPG data
+        for part of their airtime.
+      '';
+    };
     liveSportsEpg.enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -310,6 +344,10 @@ in
       {
         assertion = !cfg.dispatcharrMcp.enable || cfg.dispatcharrMcp.apiKeyFile != null;
         message = "services.mediaServer.dispatcharrMcp.enable = true requires dispatcharrMcp.apiKeyFile (config.sops.secrets.dispatcharr_mcp_api_key.path).";
+      }
+      {
+        assertion = !cfg.dispatcharr.epgAutoMatch.enable || cfg.dispatcharr.epgAutoMatch.apiKeyFile != null;
+        message = "services.mediaServer.dispatcharr.epgAutoMatch.enable = true requires dispatcharr.epgAutoMatch.apiKeyFile (e.g. config.sops.secrets.dispatcharr_mcp_api_key.path).";
       }
       {
         assertion = !cfg.liveSportsEpg.enable || cfg.liveSportsEpg.m3uUrlFile != null;
@@ -656,6 +694,42 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
           ];
         };
 
+      ########################################
+      # Dispatcharr EPG auto-match (optional)
+      ########################################
+      # Dispatcharr only links a channel to EPG data when something asks it to.
+      # Live-Games channels are created and destroyed as games come and go, so
+      # without this they stay on dummy guide data for their whole airtime.
+      systemd.services.dispatcharr-epg-automatch = lib.mkIf (cfg.dispatcharr.epgAutoMatch.enable && cfg.dispatcharr.epgAutoMatch.apiKeyFile != null) {
+        description = "Trigger Dispatcharr EPG auto-match for channels without EPG data";
+        after = [ "podman-dispatcharr.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          DynamicUser = true;
+          LoadCredential = "apikey:${cfg.dispatcharr.epgAutoMatch.apiKeyFile}";
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          PrivateTmp = true;
+        };
+        script = ''
+          ${pkgs.curl}/bin/curl -fsS -m 60 -X POST \
+            -H "X-API-Key: $(cat "$CREDENTIALS_DIRECTORY/apikey")" \
+            -H 'Content-Type: application/json' \
+            -d '{}' \
+            http://127.0.0.1:9191/api/channels/channels/match-epg/
+        '';
+      };
+
+      systemd.timers.dispatcharr-epg-automatch = lib.mkIf (cfg.dispatcharr.epgAutoMatch.enable && cfg.dispatcharr.epgAutoMatch.apiKeyFile != null) {
+        description = "Periodic Dispatcharr EPG auto-match";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "5m";
+          OnUnitActiveSec = "${toString cfg.dispatcharr.epgAutoMatch.intervalMinutes}m";
+          Persistent = true;
+        };
+      };
       ########################################
       # Dispatcharr MCP server (optional)
       ########################################
