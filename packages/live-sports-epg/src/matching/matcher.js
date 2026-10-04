@@ -70,6 +70,22 @@ function similarity(a, b) {
 }
 
 /**
+ * Some providers shorten team names to a single, ambiguous word ("York",
+ * "Angeles", "Bay"). Global alias resolution picks one fixed team for these,
+ * often from the wrong sport, so also accept a side whose words all appear in
+ * the event team's full name — the pairing with the other side disambiguates.
+ */
+const PARTIAL_SCORE = 0.6;
+function tokens(name) {
+  return normalizeTeamName(stripNoise(name)).split(' ').filter(Boolean);
+}
+function partialSide(rawTokens, evName) {
+  if (rawTokens.length === 0 || rawTokens.some((t) => t.length < 3)) return false;
+  const evTokens = tokens(evName);
+  return rawTokens.every((t) => evTokens.includes(t));
+}
+
+/**
  * Lower is better. Series/rematches produce several events with the same
  * teams: prefer one likely in progress, then the soonest upcoming, then the
  * most recently started. Time-based because cached ESPN status can be stale.
@@ -111,23 +127,33 @@ export function matchStream(tvgId, events, { now = new Date() } = {}) {
 
   const awayCanon = resolveCanonical(awayRaw);
   const homeCanon = resolveCanonical(homeRaw);
+  const awayTokens = tokens(awayRaw);
+  const homeTokens = tokens(homeRaw);
 
   let best = null;
   for (const ev of events) {
-    const evAway = resolveCanonical(ev.away?.name || '');
-    const evHome = resolveCanonical(ev.home?.name || '');
+    const evAwayName = ev.away?.name || '';
+    const evHomeName = ev.home?.name || '';
+    const evAway = resolveCanonical(evAwayName);
+    const evHome = resolveCanonical(evHomeName);
 
     // A match requires the *pair* to align. Allow swap so a home/away
     // mismatch doesn't kill the match (some providers label differently).
-    const sameSide = awayCanon === evAway && homeCanon === evHome;
-    const swapped = awayCanon === evHome && homeCanon === evAway;
-    if (!sameSide && !swapped) continue;
-
-    // Score against the orientation that actually matched, otherwise a
-    // swapped pair scores ~0 and gets rejected by the caller's threshold.
-    const awayScore = similarity(awayCanon, sameSide ? evAway : evHome);
-    const homeScore = similarity(homeCanon, sameSide ? evHome : evAway);
-    const score = (awayScore + homeScore) / 2;
+    let sameSide = awayCanon === evAway && homeCanon === evHome;
+    let swapped = awayCanon === evHome && homeCanon === evAway;
+    let score;
+    if (sameSide || swapped) {
+      // Score against the orientation that actually matched, otherwise a
+      // swapped pair scores ~0 and gets rejected by the caller's threshold.
+      const awayScore = similarity(awayCanon, sameSide ? evAway : evHome);
+      const homeScore = similarity(homeCanon, sameSide ? evHome : evAway);
+      score = (awayScore + homeScore) / 2;
+    } else {
+      sameSide = partialSide(awayTokens, evAwayName) && partialSide(homeTokens, evHomeName);
+      swapped = partialSide(awayTokens, evHomeName) && partialSide(homeTokens, evAwayName);
+      if (!sameSide && !swapped) continue;
+      score = PARTIAL_SCORE;
+    }
     const rank = timeRank(ev, now);
     if (!best || score > best.confidence || (score === best.confidence && rank < best.rank)) {
       best = { event: ev, confidence: score, rank, swapped: !sameSide, reason: { awayCanon, homeCanon } };

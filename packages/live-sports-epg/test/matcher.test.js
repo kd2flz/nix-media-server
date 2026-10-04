@@ -160,6 +160,41 @@ describe('matchStream', () => {
     assert.equal(r.matched, false);
   });
 
+  it('matches ambiguous one-word team fragments via the event pairing', () => {
+    const ev = (id, away, home, sport = 'NFL') => ({
+      id, sport: { key: sport, label: sport }, league: sport,
+      startTime: '2026-10-04T17:00:00Z', endTime: null,
+      away: { name: away }, home: { name: home },
+    });
+    const events = [
+      ev('nyj-chi', 'New York Jets', 'Chicago Bears'),
+      ev('ari-nyg', 'Arizona Cardinals', 'New York Giants'),
+      ev('lar-phi', 'Los Angeles Rams', 'Philadelphia Eagles'),
+      ev('gb-tb', 'Green Bay Packers', 'Tampa Bay Buccaneers'),
+      ev('det-wpg', 'Detroit Red Wings', 'Winnipeg Jets', 'NHL'),
+      ev('nyy-stl', 'New York Yankees', 'St. Louis Cardinals', 'MLB'),
+    ];
+    const now = new Date('2026-10-04T17:30:00Z');
+    const id = (tvg) => matchStream(tvg, events, { now }).event?.id;
+    assert.equal(id('Bears @ York'), 'nyj-chi');
+    assert.equal(id('Eagles @ Angeles'), 'lar-phi');
+    assert.equal(id('Bay @ Bay'), 'gb-tb');
+    assert.equal(id('Red @ Jets'), 'det-wpg');
+    // Exact alias match outranks a partial one.
+    assert.equal(id('Yankees @ Cardinals'), 'nyy-stl');
+    const r = matchStream('Bears @ York', events, { now });
+    assert.ok(r.confidence >= 0.5 && r.confidence < 1);
+    assert.equal(r.swapped, true);
+  });
+
+  it('does not partially match on very short tokens', () => {
+    const r = matchStream('LA @ NY', [{
+      id: 'x', startTime: '2026-10-04T17:00:00Z',
+      away: { name: 'Los Angeles Rams' }, home: { name: 'New York Giants' },
+    }]);
+    assert.equal(r.matched, false);
+  });
+
   it('picks the right game of a multi-day series', () => {
     const game = (id, startTime, state) => ({
       ...sampleEvents[0], id, startTime, status: { state },
