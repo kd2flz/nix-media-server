@@ -76,6 +76,27 @@ You can customize its behavior using these options:
 *   `services.mediaServer.emby.enable`  
     Enable or disable Emby media server (alternative to Jellyfin). *(Default: `false`)*
 
+### Emby Automatic Updates
+
+Every Emby-enabled host automatically checks `docker.io/emby/embyserver:latest`
+on Sundays at 04:00 local time, with up to 15 minutes of randomized delay.
+Podman's native auto-update restarts Emby only when the registry image changes.
+Other containers are not opted into auto-update by this configuration.
+Missed update windows are skipped rather than run immediately at the next boot.
+
+A failed image pull leaves the running container untouched. Podman attempts to
+restore the previous image if the updated systemd service fails to start, but
+this is not an Emby application-health check and cannot undo database migrations.
+Keep backups of `/var/emby/config`; updates can interrupt active streams.
+
+After deployment, inspect the schedule and update results on the host:
+
+```bash
+systemctl list-timers podman-auto-update.timer
+sudo journalctl -u podman-auto-update.service -n 50 --no-pager
+sudo podman auto-update --dry-run
+```
+
 ***
 
 ### Example Host Configuration
