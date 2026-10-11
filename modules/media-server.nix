@@ -410,7 +410,8 @@ in
 
     # Emby container with GPU passthrough for hardware transcoding
     virtualisation.oci-containers.containers.emby = lib.mkIf cfg.emby.enable {
-      image = "emby/embyserver:latest";
+      image = "docker.io/emby/embyserver:latest";
+      labels."io.containers.autoupdate" = "registry";
 
       volumes = [
         "/var/emby/config:/config"
@@ -432,6 +433,19 @@ in
       ] ++ lib.optionals (cfg.gpu == "intel") [
         "--device=/dev/dri:/dev/dri"
       ];
+    };
+
+    systemd.services.podman-auto-update = lib.mkIf cfg.emby.enable {
+      serviceConfig.ExecStart = lib.mkForce "${config.virtualisation.podman.package}/bin/podman auto-update --rollback=true";
+    };
+
+    systemd.timers.podman-auto-update = lib.mkIf cfg.emby.enable {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = lib.mkForce "Sun *-*-* 04:00:00";
+        Persistent = lib.mkForce false;
+        RandomizedDelaySec = "15min";
+      };
     };
 
     ########################################
