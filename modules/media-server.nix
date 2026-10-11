@@ -458,12 +458,13 @@ in
       requires = [ "podman-emby.service" ];
       path = with pkgs; [ python3 ];
       serviceConfig = {
+        LoadCredential = "apikey:${cfg.emby.apiKeyFile}";
         ExecStart = "${pkgs.python3}/bin/python3 ${pkgs.writeText "emby-exporter.py" ''
 import json, os, sys, time, urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
 
-API_KEY_FILE = "${cfg.emby.apiKeyFile}"
+API_KEY_FILE = os.path.join(os.environ["CREDENTIALS_DIRECTORY"], "apikey")
 API_KEY = open(API_KEY_FILE).read().strip()
 EMBY_HOST, EMBY_PORT, LISTEN_PORT = "127.0.0.1", 8096, 8097
 POLL_INTERVAL = 15
