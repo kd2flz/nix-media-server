@@ -338,7 +338,25 @@ creation_rules:
 
 Re-encrypt secrets: `sops updatekeys secrets/secrets.yaml` (inside `nix develop`)
 
-### 4. On the host, create mount points
+### 4. Stage, validate, and commit the host
+
+Git-based flakes only include tracked files. Stage the new host files before asking Nix to discover the host; otherwise commands such as `nix flake show` or `nixos-rebuild` may report that the configuration does not exist.
+
+```bash
+git add hosts/<hostname>/default.nix hosts/<hostname>/hardware.nix
+# If the host's age key or secrets changed, stage both SOPS files too:
+git add .sops.yaml secrets/secrets.yaml
+
+git status --short
+git diff --cached --check
+nix flake show
+nix eval --raw .#nixosConfigurations.<hostname>.config.system.build.toplevel.drvPath
+git commit -m "Add <hostname> host configuration"
+```
+
+Review the staged changes before committing. `secrets/secrets.yaml` must remain SOPS-encrypted; never stage plaintext secret values. Include any other files required by the host in the commit, such as a sandbox branch mapping change in `flake.nix`. After committing, complete the remaining setup and deploy in step 7; pushing to the appropriate branch triggers Comin deployment.
+
+### 5. On the host, create mount points
 
 ```bash
 sudo mkdir -p /srv/media /nix /home /boot
@@ -346,15 +364,15 @@ sudo mkdir -p /srv/media /nix /home /boot
 
 NixOS mounts existing BTRFS subvolumes/partitions at these paths — it does not create them.
 
-### 5. DNS
+### 6. DNS
 
 Add a CNAME: `<domain-base>` → `<hostname>` (pointing to the host's IP).
 
-### 6. Deploy
+### 7. Deploy
 
 Push to the appropriate branch (`main` for production, `dev` for T29769 sandbox). Comin auto-deploys.
 
-### 7. Verify
+### 8. Verify
 
 - `nix flake show` — confirm the new host appears in `nixosConfigurations`
 - On the host: `mount | grep /srv/media` and `btrfs filesystem usage /srv/media`
