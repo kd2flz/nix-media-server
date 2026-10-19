@@ -13,6 +13,19 @@ nix flake check                   # Run flake checks
 nix eval --file . nixosConfigurations.T29769.config.system.build.toplevel.outPath
 ```
 
+### Add and Commit a Host
+```bash
+git add hosts/<hostname>/default.nix hosts/<hostname>/hardware.nix
+# If host keys/secrets changed, also run:
+git add .sops.yaml secrets/secrets.yaml
+git status --short
+git diff --cached --check
+nix flake show
+nix eval --raw .#nixosConfigurations.<hostname>.config.system.build.toplevel.drvPath
+git commit -m "Add <hostname> host configuration"
+```
+See [CLAUDE.md](CLAUDE.md) for the full new-host and SOPS workflow. Stage host files before flake validation; Git-based flakes otherwise omit untracked files.
+
 ### Test Without Applying (requires NixOS)
 ```bash
 sudo nixos-rebuild dry-run --flake .#<hostname>

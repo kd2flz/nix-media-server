@@ -983,6 +983,7 @@ services.caddy = let
       # Always open HTTP/HTTPS for Caddy.
       # Only open service-specific ports when those services are enabled.
       allowedTCPPorts = [ 80 443 ]
+        ++ lib.optionals cfg.emby.enable [ 8096 ]
         ++ lib.optionals cfg.wizarr.enable [ 5690 ]
         ++ lib.optionals config.services.monitoring.enable [ 3000 9001 ]
         ++ lib.optionals cfg.dispatcharrMcp.enable [ 8000 ]

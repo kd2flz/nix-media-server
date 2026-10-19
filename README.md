@@ -130,8 +130,8 @@ Common settings (hostname, timezone, SSH keys) live in:
     cp hosts/T29769/hardware.nix hosts/my-server/
     ```
 
-3.  **Customize `flake.nix`**:  
-    The flake auto-discovers hosts from `hosts/`.
+3.  **Host discovery**:
+    No `flake.nix` edit is needed to register a host. The flake auto-discovers directories under `hosts/` that contain both `default.nix` and `hardware.nix`; the directory name must match `networking.hostName`. Stage new files with Git before running flake commands, because Git-based flakes omit untracked files.
 
 4.  **Build and deploy** (on the target NixOS machine):
     ```bash
@@ -325,6 +325,24 @@ sudo nixos-rebuild switch --flake .#new-hostname
 
 7. **Add the host to sops-nix** (see Secrets Management below).
 
+8. **Stage, validate, and commit the host configuration**. Stage only the files for this host and any related SOPS changes; do not use `git add -A`, which can include unrelated work:
+  ```bash
+  git add hosts/<hostname>/default.nix hosts/<hostname>/hardware.nix
+  # If the host key or secrets changed, also stage the SOPS files:
+  git add .sops.yaml secrets/secrets.yaml
+
+  git status --short
+  git diff --cached --check
+  nix flake show
+  nix eval --raw .#nixosConfigurations.<hostname>.config.system.build.toplevel.drvPath
+  ```
+
+  Review the staged changes and confirm `secrets/secrets.yaml` is still SOPS-encrypted, then commit:
+  ```bash
+  git commit -m "Add <hostname> host configuration"
+  ```
+  If `.sops.yaml` or `secrets/secrets.yaml` changed, include those files in this same commit. After the remaining setup is complete, follow the deployment instructions below to push to the appropriate branch.
+
 ***
 
 ### Adding a Wildcard TLS Certificate (PKCS#12)
@@ -424,11 +442,7 @@ nix develop
 sops updatekeys secrets/secrets.yaml
 ```
 
-**5. Commit and push:**
-
-```bash
-git add -A && git commit -m "Add new-host to sops-nix" && git push
-```
+After re-encrypting, return to [Adding a New Host](#adding-a-new-host) and complete step 8. Stage `.sops.yaml` and `secrets/secrets.yaml` with the host files when they changed; avoid `git add -A` so unrelated files are not included.
 
 ***
 
