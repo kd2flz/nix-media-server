@@ -17,6 +17,7 @@ This project was created with lots of help from AI.
 *   **Wizarr**: Invitation management for Jellyfin.
 *   **Caddy**: Reverse proxy for all services, with optional internal or wildcard TLS.
 *   **Monitoring**: Prometheus + Grafana + alerting, with per-host dashboards.
+*   **Speech-to-Text**: Optional whisper.cpp transcription API (audio/video in, text out).
 *   **Configurable Media Paths**: Define root, music, video, and audiobook directories.
 *   **SAMBA File Sharing**: Enable file sharing over SMB (for managing media files).
 *   **OpenSSH**: Secure remote access (key-only, password auth disabled by default).
@@ -470,6 +471,60 @@ sudo chmod -R 775 /srv/media
 sudo chmod 755 /srv/media/{music,video,audiobooks}
 ```
 
+## Speech-to-Text (Optional Module)
+
+`modules/speech-to-text.nix` runs the [whisper.cpp](https://github.com/ggml-org/whisper.cpp) HTTP server, turning audio and video into text on demand. Nothing is transcribed automatically — the service only transcribes what you POST to it, so your media library is never scanned in the background.
+
+### Enabling
+
+```nix
+services.speechToText = {
+  enable = true;
+  expose = "public";   # "private" keeps the service on loopback only
+  model = "small.en";
+};
+```
+
+`expose = "public"` publishes the service through Caddy at `speech.<services.mediaServer.domainBase>` and requires `services.mediaServer.enable = true` (Caddy is configured by the media-server module).
+
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `services.speechToText.enable` | `false` | Enable the transcription server. |
+| `services.speechToText.expose` | `"public"` | `"public"` reverse-proxies through Caddy at `speech.<domainBase>`; `"private"` keeps it on loopback with no vhost. |
+| `services.speechToText.model` | `"small.en"` | Name of a model in the module's built-in table. |
+| `services.speechToText.modelFile` | `null` | Explicit path to a ggml model file. Overrides `model`. |
+| `services.speechToText.host` | `127.0.0.1` | Listen address. |
+| `services.speechToText.port` | `8080` | Listen port. |
+| `services.speechToText.language` | `"en"` | Spoken language; `"auto"` detects per request. |
+| `services.speechToText.threads` | `4` | CPU threads used for inference. |
+| `services.speechToText.basicAuth.user` | `""` | Caddy basic auth user name. Requires `basicAuth.hash`. |
+| `services.speechToText.basicAuth.hash` | `""` | bcrypt hash of the basic auth password. |
+| `services.speechToText.openFirewall` | `false` | Open the port directly. Not needed behind Caddy. |
+| `services.speechToText.requestPath` | `""` | Extra path prefix, e.g. `"/v1/audio"` for an OpenAI-compatible endpoint. |
+| `services.speechToText.inferencePath` | `"/inference"` | Route that accepts the multipart transcription request. |
+
+### API
+
+The server ships an inline web UI at `/` and a multipart endpoint at `/inference`:
+
+```shell
+curl -s http://127.0.0.1:8080/inference \
+  -F file=@sample.mp3 \
+  -F response_format=text
+```
+
+`response_format` accepts `json`, `text`, `verbose_json`, `srt`, and `vtt`. Because the package is built with ffmpeg support, any audio or video container is accepted — no manual conversion needed.
+
+For an OpenAI-compatible endpoint, set `requestPath = "/v1/audio"` and `inferencePath = "/transcriptions"`, then post to `/v1/audio/transcriptions`.
+
+### Notes
+
+- Inference is CPU-only; `small.en` runs at roughly 1–3x realtime on a modest CPU.
+- The service is unauthenticated unless `basicAuth` is set, so it binds loopback and relies on Caddy for access control.
+- The unit runs with systemd hardening (`ProtectSystem=strict`, no capabilities, private `/tmp`) and keeps its state in `/var/lib/speech-to-text`.
+
 ## Samba File Sharing (Optional Module)
 If services.mediaServer.samba.enable = true; is set, the module automatically:
 
@@ -600,6 +655,7 @@ Alert rules are defined declaratively in `modules/monitoring.nix` under `service
 | Jellyfin Down | Service unavailable for 2m | critical |
 | Comin Down | Service unavailable for 2m | critical |
 | Audiobookshelf Down | Service unavailable for 2m | critical |
+| Speech-to-Text Down | Service unavailable for 2m | critical |
 
 ### Configuration
 

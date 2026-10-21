@@ -43,6 +43,7 @@ Every host gets the same module stack injected automatically:
 - `modules/common.nix` — SSH (key-only, no password auth), admin user, Nix GC, Podman, GNOME, `stateVersion`
 - `modules/media-server.nix` — the `services.mediaServer.*` option tree (Jellyfin/Emby, Audiobookshelf, Wizarr, Samba, Caddy, Nanitor, KACE)
 - `modules/monitoring.nix` — `services.monitoring.*` (Prometheus + Grafana + exporters + alert rules)
+- `modules/speech-to-text.nix` — `services.speechToText.*` (whisper.cpp transcription API, off by default)
 - `sops-nix` module with `sops.defaultSopsFile` pre-pointed at `secrets/secrets.yaml`
 - `comin` module
 - `nanitor-agent` module (from the `nanitor` flake input), exposed via a `nanitorOverlay` that adds `pkgs.nanitor-agent`
@@ -80,6 +81,20 @@ For hosts with two drives mirroring `/srv/media`:
 ### Caddy vhosts are conditionally rendered
 
 `modules/media-server.nix` builds Caddy's `extraConfig` by string-concatenating site blocks gated on each service toggle (`cfg.wizarr.enable`, `cfg.audiobookshelf.enable`, `config.services.monitoring.enable`). Vhosts are always `<service>.${cfg.domainBase}` and always `tls internal`. If you add a new web-facing service, add its block here — there is no abstraction to extend.
+
+The one exception is `modules/speech-to-text.nix`, which registers its vhost through `services.caddy.virtualHosts` instead. nixpkgs renders `virtualHosts` *after* `extraConfig`, so the two coexist without a definition conflict — prefer `extraConfig` for services owned by the media-server module, and `virtualHosts` for standalone modules that must not reach into `services.mediaServer`.
+
+### Speech-to-text (`services.speechToText.*`)
+
+`modules/speech-to-text.nix` runs the upstream whisper.cpp HTTP server (`pkgs.whisper-cpp.override { withFFmpegSupport = true; }`) as a standalone, opt-in service. Points worth knowing:
+
+- **Nothing is transcribed automatically.** The service is a pure request/response API — no scheduler, no library scanner, no `/srv/media` access.
+- **The model is a Nix store path.** `services.speechToText.model` selects from a built-in table of ggml models (`small.en` by default); `modelFile` overrides it with an explicit path. The hash is verified at build time, so the first build downloads the file into the store.
+- **`lib.getExe` is wrong here.** `pkgs.whisper-cpp` declares `whisper-cli` as its main program, so the unit must call `${cfg.package}/bin/whisper-server` explicitly.
+- **`--tmp-dir` is mandatory.** whisper-server defaults it to the current working directory; the unit points it at `/var/lib/speech-to-text/tmp` (a tmpfiles-managed, service-owned directory) and runs with `ProtectSystem=strict`.
+- **The wrapper supplies ffmpeg.** The `whisper-server` wrapper prepends the ffmpeg `bin` directory to `PATH`, which is what makes `--convert` (accepting any container) work.
+- **The API is upstream, not custom.** `POST /inference` takes a multipart `file` plus `response_format` (`json`/`text`/`verbose_json`/`srt`/`vtt`), `GET /health` is the health check, and `GET /` serves the built-in web UI. There is no `/v1/audio/transcriptions` route unless you mount one with `requestPath`/`inferencePath`.
+- **Exposure is opt-out.** `expose = "public"` publishes `speech.<domainBase>` through Caddy; `"private"` keeps the service on loopback with no vhost. The server itself is unauthenticated, so `basicAuth` (a bcrypt hash, never a plaintext password) is the only access control in front of it.
 
 ### Nanitor enrollment override (do not remove without checking upstream)
 

@@ -85,6 +85,7 @@
             ./modules/media-server.nix
             ./modules/monitoring.nix
             ./modules/ollama.nix
+            ./modules/speech-to-text.nix
             ./hosts/${host}/default.nix
             ./hosts/${host}/hardware.nix
 

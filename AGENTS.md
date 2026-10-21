@@ -83,6 +83,15 @@ sops updatekeys secrets/secrets.yaml  # re-encrypt after .sops.yaml change
 - `lib.mkIf` / `lib.mkEnableOption` for conditionals and boolean flags
 - Section headers: `########################################`
 
+## Documentation
+
+- `README.md` and `CLAUDE.md` are the canonical docs; keep them in sync.
+- `docs/nix-media-server-presentation.md` is a MARP deck summarising the same
+  architecture. **Keep it up to date alongside the other docs** — when you add,
+  remove, or rename a module, host, service, secret, or option, update the deck
+  in the same change so it does not drift.
+- Render it with `npx @marp-team/marp-cli docs/nix-media-server-presentation.md -o /tmp/deck.html`.
+
 ## Git Workflow
 
 - Push to `dev` → deploys to T29769 only
@@ -101,3 +110,4 @@ sops updatekeys secrets/secrets.yaml  # re-encrypt after .sops.yaml change
 | Grafana | 3000 | Dashboards (loopback only) |
 | Prometheus | 9001 | Metrics (loopback only) |
 | Comin | — | GitOps agent |
+| Speech-to-Text | 8080 | whisper.cpp transcription API (optional module) |
