@@ -110,4 +110,8 @@ sops updatekeys secrets/secrets.yaml  # re-encrypt after .sops.yaml change
 | Grafana | 3000 | Dashboards (loopback only) |
 | Prometheus | 9001 | Metrics (loopback only) |
 | Comin | — | GitOps agent |
-| Speech-to-Text | 8080 | whisper.cpp transcription API (optional module) |
+| Speech-to-Text | 8080 | whisper.cpp transcription API (fronted by Open WebUI) |
+
+### Speech-to-text via Open WebUI (AI stack)
+
+whisper.cpp runs on loopback (`expose = "private"`) and is wired to Open WebUI by `services.aiStack`. The public endpoint is `https://ai.<domainBase>` (e.g. `ai.media-bel.ccistack.com`) with Open WebUI authentication. Open WebUI uses whisper as an OpenAI-compatible STT backend at `http://127.0.0.1:<port>/v1/audio/transcriptions`. The old `speech.<domainBase>` basic-auth flow has been replaced.

@@ -721,3 +721,11 @@ curl http://localhost:9001/metrics
 # View Grafana logs
 sudo journalctl -u grafana -n 50
 ```
+### Speech-to-text via Open WebUI (AI stack)
+
+whisper.cpp is now fronted by Open WebUI on the AI stack. The `speech-to-text` service binds to loopback only (`expose = "private"`) and is wired to Open WebUI as an OpenAI-compatible STT backend. Access is via:
+
+- **UI:** `https://ai.<domainBase>` (e.g. `ai.media-bel.ccistack.com` on P27691)
+- **Backend wiring:** `services.aiStack` auto-configures Open WebUI to use `http://127.0.0.1:<whisper-port>/v1/audio/transcriptions` (OpenAI-compatible). The whisper server itself has no auth.
+
+The old `speech.<domainBase>` public basic-auth flow is replaced by Open WebUI user authentication. The speech basic-auth helper is no longer needed for the public speech endpoint.
