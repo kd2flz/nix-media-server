@@ -123,7 +123,7 @@ in
     ########################################
     # Caddy reverse proxy
     ########################################
-    services.caddy.virtualHosts = {
+    services.caddy.virtualHosts = lib.mkIf hasMediaServer {
       "${cfg.domainBase}" = {
         extraConfig = ''
           ${tlsLine}
