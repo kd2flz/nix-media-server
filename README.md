@@ -721,3 +721,12 @@ curl http://localhost:9001/metrics
 # View Grafana logs
 sudo journalctl -u grafana -n 50
 ```
+### Updating the speech-to-text basic auth password
+
+The speech-to-text service uses HTTP Basic Auth enforced by Caddy (the whisper.cpp server itself has no auth). When the password changes:
+
+1. Enter the nix develop shell (sets up sops/age): `nix develop`
+2. Run the helper script: `./update-speech-password.sh` (from the repo root). It will generate a bcrypt hash and update `speech_basic_auth_hash` in `secrets/secrets.yaml` via `sops set`.
+3. Commit and push `secrets/secrets.yaml`. Hosts configured with `restartUnits` on that secret (e.g. P27691) will restart `speech-to-text-auth-env.service` and `caddy.service` on deploy.
+
+All API access through the public endpoint (`POST /inference` or OpenAI-compatible paths like `/v1/audio/transcriptions`) requires the updated Basic Auth credentials.

@@ -111,3 +111,13 @@ sops updatekeys secrets/secrets.yaml  # re-encrypt after .sops.yaml change
 | Prometheus | 9001 | Metrics (loopback only) |
 | Comin | — | GitOps agent |
 | Speech-to-Text | 8080 | whisper.cpp transcription API (optional module) |
+
+### Updating the speech-to-text basic auth password
+
+The speech-to-text service uses HTTP Basic Auth enforced by Caddy (the whisper.cpp server itself has no auth). To rotate the password:
+
+1. `nix develop` (sets up sops/age environment)
+2. `./update-speech-password.sh` from repo root - generates a bcrypt hash and updates `speech_basic_auth_hash` in `secrets/secrets.yaml` via `sops set`
+3. Commit and push `secrets/secrets.yaml`. On hosts with `restartUnits` set (e.g. P27691), `speech-to-text-auth-env.service` and `caddy.service` restart on deploy.
+
+All API access through the public endpoint (`POST /inference` or OpenAI-compatible paths like `/v1/audio/transcriptions`) requires the updated Basic Auth credentials.
