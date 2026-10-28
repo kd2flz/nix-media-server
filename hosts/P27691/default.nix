@@ -59,6 +59,16 @@
     group = "root";
   };
 
+  # Speech-to-text (whisper.cpp) basic auth. The hash is the only part the
+  # host decrypts; the plaintext password is kept in sops for rotation but is
+  # never written to this machine.
+  sops.secrets.speech_basic_auth_hash = {
+    mode = "0400";
+    owner = "root";
+    group = "root";
+    restartUnits = [ "speech-to-text-auth-env.service" "caddy.service" ];
+  };
+
   services.monitoring.enable = true;
 
   services.mediaServer = {
@@ -105,6 +115,17 @@
     kace.enable     = true;
     kace.hostFile   = config.sops.secrets.kace_host_p27691.path;
     kace.packageUrl = "https://github.com/kd2flz/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
+  };
+
+  # Speech-to-text transcription API (whisper.cpp). Published through Caddy at
+  # speech.media-bel.ccistack.com with basic auth; the bcrypt hash comes from
+  # sops. Inference is CPU-only, so keep the model small on this box.
+  services.speechToText = {
+    enable = true;
+    expose = "public";
+    model = "small.en";
+    basicAuth.user = "media";
+    basicAuth.hashFile = config.sops.secrets.speech_basic_auth_hash.path;
   };
 
   # Quadro P2200 is Pascal (SM 6.1). The nixpkgs default CUDA build targets

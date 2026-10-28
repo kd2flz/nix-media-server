@@ -116,6 +116,20 @@ in
           job_name = "comin";
           static_configs = [ { targets = [ "127.0.0.1:4243" ]; } ];
         }
+      ] ++ lib.optionals (config.services.speechToText.enable or false) [
+        {
+          job_name = "speech-to-text";
+          metrics_path = "/probe";
+          params = { module = [ "http_2xx" ]; };
+          static_configs = [
+            { targets = [ "http://127.0.0.1:${toString config.services.speechToText.port}/health" ]; }
+          ];
+          relabel_configs = [
+            { source_labels = [ "__address__" ]; target_label = "__param_target"; }
+            { source_labels = [ "__param_target" ]; target_label = "instance"; }
+            { target_label = "__address__"; replacement = "127.0.0.1:9115"; }
+          ];
+        }
       ];
     };
 
@@ -575,6 +589,40 @@ in
                 annotations = {
                   summary = "Audiobookshelf is down";
                   description = "Audiobookshelf has been unavailable for 2 minutes";
+                };
+                labels = { severity = "critical"; };
+              }
+              {
+                uid = "speech-to-text-down";
+                title = "Speech-to-Text Down";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  relativeTimeRange = {
+                    from = 120;
+                    to = 0;
+                  };
+                  datasourceUid = "PBFA97CFB590B2093";
+                  model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "PBFA97CFB590B2093";
+                    };
+                    expr = "probe_success{job=\"speech-to-text\"} == 0";
+                    instant = true;
+                    interval = null;
+                    intervalMs = 15000;
+                    maxDataPoints = 43200;
+                    range = false;
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "2m";
+                annotations = {
+                  summary = "Speech-to-text is down";
+                  description = "Speech-to-text has been unavailable for 2 minutes";
                 };
                 labels = { severity = "critical"; };
               }

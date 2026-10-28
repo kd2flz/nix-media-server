@@ -8,8 +8,6 @@
 
   services.monitoring.enable = true;
   services.monitoring.enableDeadManSwitch = true;
-  services.monitoring.deadManURL = "https://hc-ping.com/000e29a6-91e0-45e8-a05a-f1d0513decdb";
-
   networking.hostName = "T29769";       # per-host can override if desired
   time.timeZone = "America/New_York";
 
@@ -56,5 +54,14 @@
     kace.enable = true;
     kace.hostFile = config.sops.secrets.kace_host_t29769.path;
     kace.packageUrl = "https://github.com/kd2flz/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
+  };
+
+  # Speech-to-text transcription API (whisper.cpp). Reachable at
+  # speech.t29769.community.int; set expose = "private" to keep it on
+  # loopback only.
+  services.speechToText = {
+    enable = true;
+    expose = "public";
+    model = "small.en";
   };
 }
