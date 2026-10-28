@@ -59,15 +59,7 @@
     group = "root";
   };
 
-  # Speech-to-text (whisper.cpp) basic auth. The hash is the only part the
-  # host decrypts; the plaintext password is kept in sops for rotation but is
-  # never written to this machine.
-  sops.secrets.speech_basic_auth_hash = {
-    mode = "0400";
-    owner = "root";
-    group = "root";
-    restartUnits = [ "speech-to-text-auth-env.service" "caddy.service" ];
-  };
+  # Speech-to-text (whisper.cpp) now fronts via Open WebUI; no public basic auth required.
 
   services.monitoring.enable = true;
 
@@ -117,15 +109,23 @@
     kace.packageUrl = "https://github.com/kd2flz/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
   };
 
-  # Speech-to-text transcription API (whisper.cpp). Published through Caddy at
-  # speech.media-bel.ccistack.com with basic auth; the bcrypt hash comes from
-  # sops. Inference is CPU-only, so keep the model small on this box.
+  # Speech-to-text transcription API (whisper.cpp). Bound to loopback for
+  # Open WebUI integration; exposed via ai.media-bel.ccistack.com (Open WebUI).
+  # Inference is CPU-only, so keep the model small on this box.
   services.speechToText = {
     enable = true;
-    expose = "public";
+    expose = "private";
+    host = "127.0.0.1";
+    port = 8080;
     model = "small.en";
-    basicAuth.user = "media";
-    basicAuth.hashFile = config.sops.secrets.speech_basic_auth_hash.path;
+    requestPath = "/v1/audio";
+    inferencePath = "/transcriptions";
+  };
+
+  # Unified AI frontend (Open WebUI) wiring Ollama + whisper.cpp
+  services.aiStack = {
+    enable = true;
+    # domainBase defaults to ai.media-bel.ccistack.com from mediaServer.domainBase
   };
 
   # Quadro P2200 is Pascal (SM 6.1). The nixpkgs default CUDA build targets

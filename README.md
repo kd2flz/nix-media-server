@@ -721,12 +721,11 @@ curl http://localhost:9001/metrics
 # View Grafana logs
 sudo journalctl -u grafana -n 50
 ```
-### Updating the speech-to-text basic auth password
+### Speech-to-text via Open WebUI (AI stack)
 
-The speech-to-text service uses HTTP Basic Auth enforced by Caddy (the whisper.cpp server itself has no auth). When the password changes:
+whisper.cpp is now fronted by Open WebUI on the AI stack. The `speech-to-text` service binds to loopback only (`expose = "private"`) and is wired to Open WebUI as an OpenAI-compatible STT backend. Access is via:
 
-1. Enter the nix develop shell (sets up sops/age): `nix develop`
-2. Run the helper script: `./update-speech-password.sh` (from the repo root). It will generate a bcrypt hash and update `speech_basic_auth_hash` in `secrets/secrets.yaml` via `sops set`.
-3. Commit and push `secrets/secrets.yaml`. Hosts configured with `restartUnits` on that secret (e.g. P27691) will restart `speech-to-text-auth-env.service` and `caddy.service` on deploy.
+- **UI:** `https://ai.<domainBase>` (e.g. `ai.media-bel.ccistack.com` on P27691)
+- **Backend wiring:** `services.aiStack` auto-configures Open WebUI to use `http://127.0.0.1:<whisper-port>/v1/audio/transcriptions` (OpenAI-compatible). The whisper server itself has no auth.
 
-All API access through the public endpoint (`POST /inference` or OpenAI-compatible paths like `/v1/audio/transcriptions`) requires the updated Basic Auth credentials.
+The old `speech.<domainBase>` public basic-auth flow is replaced by Open WebUI user authentication. The speech basic-auth helper is no longer needed for the public speech endpoint.
