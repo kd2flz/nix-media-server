@@ -95,6 +95,7 @@ The one exception is `modules/speech-to-text.nix`, which registers its vhost thr
 - **The wrapper supplies ffmpeg.** The `whisper-server` wrapper prepends the ffmpeg `bin` directory to `PATH`, which is what makes `--convert` (accepting any container) work.
 - **The API is upstream, not custom.** `POST /inference` takes a multipart `file` plus `response_format` (`json`/`text`/`verbose_json`/`srt`/`vtt`), `GET /health` is the health check, and `GET /` serves the built-in web UI. There is no `/v1/audio/transcriptions` route unless you mount one with `requestPath`/`inferencePath`.
 - **Exposure is opt-out.** `expose = "public"` publishes `speech.<domainBase>` through Caddy; `"private"` keeps the service on loopback with no vhost. The server itself is unauthenticated, so `basicAuth` (a bcrypt hash, never a plaintext password) is the only access control in front of it.
+- **Two ways to supply the hash.** `basicAuth.hash` inlines it in the Nix store (simple, but world-readable); `basicAuth.hashFile` points at a sops secret and is the better choice for an internet-facing host. The file mode runs a `speech-to-text-auth-env` oneshot that writes `/run/speech-to-text/caddy.env` (root-owned, `caddy`-readable), sets `services.caddy.environmentFile`, and the vhost references `{$SPEECH_TO_TEXT_BASIC_AUTH_HASH}` — `{$VAR}` is substituted while Caddy adapts the Caddyfile. Set `restartUnits` on the source secret so rotation restarts the env unit and Caddy.
 
 ### Nanitor enrollment override (do not remove without checking upstream)
 

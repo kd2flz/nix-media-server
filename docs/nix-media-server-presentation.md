@@ -322,6 +322,7 @@ the second poller.
 - **Nothing is scanned.** The API transcribes only what you send it — the media library is never crawled
 - **Model = a Nix store path.** `ggml-small.en.bin`, hash-verified at build time, fetched into the store
 - **Exposed through Caddy** at `speech.<domainBase>`, or kept private on loopback (`expose = "private"`)
+- **Basic auth from sops** — `basicAuth.hashFile` renders the bcrypt hash into a `/run` env file, never the Nix store
 - **Hardened unit**: loopback bind, `ProtectSystem=strict`, no capabilities, private `/tmp`
 
 > CPU-only: `small.en` runs ~1–3x realtime. GPU whisper would need a CUDA rebuild — out of scope.

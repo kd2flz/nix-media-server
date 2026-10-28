@@ -31,6 +31,15 @@ let
     then "tls ${mediaCfg.tls.certFile} ${mediaCfg.tls.keyFile}"
     else "tls internal";
 
+  # When the hash comes from a file, Caddy reads it from the environment at
+  # adapt time; `{$VAR}` is substituted while the Caddyfile is parsed.
+  basicAuthHash =
+    if cfg.basicAuth.hashFile != null
+    then "{$SPEECH_TO_TEXT_BASIC_AUTH_HASH}"
+    else cfg.basicAuth.hash;
+
+  basicAuthFromFile = cfg.expose == "public" && cfg.basicAuth.hashFile != null;
+
   # whisper-server ships a tiny inline web UI on / and the OpenAI-style
   # multipart endpoint on /inference. Neither requires a build step, so the
   # module only needs a model file and a systemd unit.
@@ -80,7 +89,7 @@ in
       user = lib.mkOption {
         type = lib.types.str;
         default = "";
-        description = "User name for Caddy basic auth. Requires `hash` to be set.";
+        description = "User name for Caddy basic auth. Requires `hash` or `hashFile` to be set.";
       };
 
       hash = lib.mkOption {
@@ -90,7 +99,17 @@ in
           bcrypt hash of the basic auth password, e.g.
           `htpasswd -nBC 10 "" | tr -d ':\n'`. The hash is stored in the Nix
           store and in the generated Caddyfile — never put a plaintext
-          password here.
+          password here. Prefer `hashFile` for a hash kept in sops.
+        '';
+      };
+
+      hashFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = ''
+          Path to a file containing the bcrypt hash (typically a sops-nix
+          secret). Read at activation into an environment file consumed by
+          Caddy, so the hash never enters the Nix store. Overrides `hash`.
         '';
       };
     };
@@ -174,8 +193,16 @@ in
         message = "services.speechToText.expose = \"public\" requires services.mediaServer.enable = true because Caddy is configured by the media-server module.";
       }
       {
-        assertion = (cfg.basicAuth.user == "") == (cfg.basicAuth.hash == "");
-        message = "services.speechToText.basicAuth.user and services.speechToText.basicAuth.hash must be set together.";
+        assertion = (cfg.basicAuth.user == "") == (cfg.basicAuth.hash == "" && cfg.basicAuth.hashFile == null);
+        message = "services.speechToText.basicAuth.user must be set together with basicAuth.hash or basicAuth.hashFile.";
+      }
+      {
+        assertion = !(cfg.basicAuth.hash != "" && cfg.basicAuth.hashFile != null);
+        message = "services.speechToText.basicAuth.hash and basicAuth.hashFile are mutually exclusive; set only one.";
+      }
+      {
+        assertion = !basicAuthFromFile || cfg.basicAuth.user != "";
+        message = "services.speechToText.basicAuth.hashFile requires basicAuth.user to be set.";
       }
     ];
 
@@ -245,12 +272,37 @@ in
           reverse_proxy ${cfg.host}:${toString cfg.port}
           ${lib.optionalString (cfg.basicAuth.user != "") ''
             basic_auth {
-              ${cfg.basicAuth.user} ${cfg.basicAuth.hash}
+              ${cfg.basicAuth.user} ${basicAuthHash}
             }
           ''}
         '';
       };
     };
+
+    # Render the bcrypt hash into a root-owned, caddy-readable environment
+    # file. The file lives under /run, so the hash never touches the Nix
+    # store or /etc. The host should set `restartUnits` on the source secret
+    # so rotating it restarts this unit and Caddy.
+    systemd.services.speech-to-text-auth-env = lib.mkIf basicAuthFromFile {
+      description = "speech-to-text: render Caddy basic-auth hash";
+      wantedBy = [ "multi-user.target" ];
+      before = [ "caddy.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "speech-to-text-auth-env" ''
+          install -d -m 0755 /run/speech-to-text
+          printf 'SPEECH_TO_TEXT_BASIC_AUTH_HASH=%s\n' \
+            "$(cat ${lib.escapeShellArg (toString cfg.basicAuth.hashFile)})" \
+            > /run/speech-to-text/caddy.env
+          chown root:caddy /run/speech-to-text/caddy.env
+          chmod 0400 /run/speech-to-text/caddy.env
+        '';
+      };
+    };
+
+    services.caddy.environmentFile =
+      lib.mkIf basicAuthFromFile "/run/speech-to-text/caddy.env";
 
     networking.firewall.allowedTCPPorts =
       lib.mkIf cfg.openFirewall [ cfg.port ];

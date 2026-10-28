@@ -499,8 +499,9 @@ services.speechToText = {
 | `services.speechToText.port` | `8080` | Listen port. |
 | `services.speechToText.language` | `"en"` | Spoken language; `"auto"` detects per request. |
 | `services.speechToText.threads` | `4` | CPU threads used for inference. |
-| `services.speechToText.basicAuth.user` | `""` | Caddy basic auth user name. Requires `basicAuth.hash`. |
-| `services.speechToText.basicAuth.hash` | `""` | bcrypt hash of the basic auth password. |
+| `services.speechToText.basicAuth.user` | `""` | Caddy basic auth user name. Requires `basicAuth.hash` or `basicAuth.hashFile`. |
+| `services.speechToText.basicAuth.hash` | `""` | bcrypt hash of the basic auth password, stored inline in the Nix store. |
+| `services.speechToText.basicAuth.hashFile` | `null` | Path to a file containing the bcrypt hash (typically a sops secret). Read at activation into `/run/speech-to-text/caddy.env`, so the hash never enters the Nix store. Overrides `hash`. |
 | `services.speechToText.openFirewall` | `false` | Open the port directly. Not needed behind Caddy. |
 | `services.speechToText.requestPath` | `""` | Extra path prefix, e.g. `"/v1/audio"` for an OpenAI-compatible endpoint. |
 | `services.speechToText.inferencePath` | `"/inference"` | Route that accepts the multipart transcription request. |
@@ -517,12 +518,20 @@ curl -s http://127.0.0.1:8080/inference \
 
 `response_format` accepts `json`, `text`, `verbose_json`, `srt`, and `vtt`. Because the package is built with ffmpeg support, any audio or video container is accepted — no manual conversion needed.
 
+When basic auth is enabled, add `-u <user>:<password>`:
+
+```shell
+curl -s -u media:'<password>' https://speech.<domainBase>/inference \
+  -F file=@sample.mp3 \
+  -F response_format=text
+```
+
 For an OpenAI-compatible endpoint, set `requestPath = "/v1/audio"` and `inferencePath = "/transcriptions"`, then post to `/v1/audio/transcriptions`.
 
 ### Notes
 
 - Inference is CPU-only; `small.en` runs at roughly 1–3x realtime on a modest CPU.
-- The service is unauthenticated unless `basicAuth` is set, so it binds loopback and relies on Caddy for access control.
+- The service is unauthenticated unless `basicAuth` is set, so it binds loopback and relies on Caddy for access control. Prefer `basicAuth.hashFile` pointing at a sops secret; a host that uses it should set `restartUnits = [ "speech-to-text-auth-env.service" "caddy.service" ]` on that secret so rotation takes effect on the next deploy.
 - The unit runs with systemd hardening (`ProtectSystem=strict`, no capabilities, private `/tmp`) and keeps its state in `/var/lib/speech-to-text`.
 
 ## Samba File Sharing (Optional Module)
