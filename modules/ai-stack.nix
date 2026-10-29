@@ -39,7 +39,7 @@ in
 
     port = lib.mkOption {
       type = lib.types.port;
-      default = 3000;
+      default = 3001;
       description = "Loopback port for Open WebUI.";
     };
 
