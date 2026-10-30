@@ -116,6 +116,10 @@ export class EpgService {
 
     const allEntries = parseM3U(m3uText);
     stats.m3uEntries = allEntries.length;
+    if (allEntries.length === 0 && this.lastEpgText) {
+      log.warn('M3U contained no entries; keeping last successful EPG');
+      return { xmltv: this.lastEpgText, stats, degraded: true };
+    }
     const liveEntries = filterLiveGameEntries(allEntries);
     stats.liveGameEntries = liveEntries.length;
 
