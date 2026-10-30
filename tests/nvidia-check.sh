@@ -34,8 +34,16 @@ perl -pe '
   s#/nix/store/[^/]+-nvidia[^/]+/bin/nvidia-smi#'"$tmp"'/bin/nvidia-smi#g;
   s#/nix/store/[^/]+-coreutils[^/]+/bin/date#'"$tmp"'/bin/date#g;
   s#/var/lib/node-exporter/textfile#'"$tmp"'/textfile#g;
+  s#/nix/store/[^/]+-coreutils[^/]+/bin/(\w+)#$1#g;
 ' <<<"$real_script" > "$script"
 chmod +x "$script"
+
+# Any other store path would not exist on a clean CI runner; fail loudly.
+if grep -q '/nix/store/' "$script"; then
+  echo 'FAIL: unstubbed /nix/store path left in script:' >&2
+  grep -n '/nix/store/' "$script" >&2
+  exit 1
+fi
 
 run_case() {
   local nv_ok="$1" expect="$2"

@@ -46,8 +46,16 @@ perl -pe '
   s#/nix/store/[^/]+-coreutils[^/]+/bin/date#'"$tmp"'/bin/date#g;
   s#/nix/store/[^/]+-util-linux[^/]+/bin/wall#'"$tmp"'/bin/wall#g;
   s#/nix/store/[^/]+-systemd[^/]+/bin/shutdown#'"$tmp"'/bin/shutdown#g;
+  s#/nix/store/[^/]+-coreutils[^/]+/bin/(\w+)#$1#g;
 ' <<<"$real_script" > "$script"
 chmod +x "$script"
+
+# Any other store path would not exist on a clean CI runner; fail loudly.
+if grep -q '/nix/store/' "$script"; then
+  echo 'FAIL: unstubbed /nix/store path left in script:' >&2
+  grep -n '/nix/store/' "$script" >&2
+  exit 1
+fi
 
 set_links() {
   local booted="$1" current="$2"
