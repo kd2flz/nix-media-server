@@ -829,14 +829,14 @@ in
     #############################################
     # Dead-man switch (optional)
     #############################################
-    systemd.services.deadman-ping = lib.mkIf cfg.enableDeadManSwitch {
+    systemd.services.deadman-ping = lib.mkIf (cfg.enableDeadManSwitch && cfg.deadManURL != "") {
       description = "Dead-man switch ping";
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${pkgs.curl}/bin/curl -fsS ${cfg.deadManURL}";
       };
     };
-    systemd.timers.deadman-ping = lib.mkIf cfg.enableDeadManSwitch {
+    systemd.timers.deadman-ping = lib.mkIf (cfg.enableDeadManSwitch && cfg.deadManURL != "") {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "*:*:30";

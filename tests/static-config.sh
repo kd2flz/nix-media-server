@@ -45,4 +45,16 @@ has_attr P27691 systemd.timers yes
 has_attr T29769 systemd.services no
 has_attr T29769 systemd.timers no
 
+check_deadman() {
+  local host="$1" want="$2" got
+  got="$(nix eval --json "$repo#nixosConfigurations.$host.config.systemd.services" \
+    --apply 'x: builtins.hasAttr "deadman-ping" x' 2>/dev/null)"
+  [ "$got" = true ] && got=yes || got=no
+  printf '%-8s deadman-ping service want=%-3s got=%-3s ' "$host" "$want" "$got"
+  if [ "$got" = "$want" ]; then echo ok; else echo FAIL; fail=1; fi
+}
+check_deadman T29769 no
+check_deadman P32338 yes
+check_deadman P22725 yes
+
 exit "$fail"
