@@ -418,6 +418,16 @@ When the agent proposes a code change:
 7. **Never merge or push to the target branch without explicit per-change approval.** Only merge your feature branch after the user has approved that specific change.
 8. **Promotion to `main` is via GitHub PR, never local.** After a feature branch is merged into `dev` and pushed, raise a GitHub pull request `dev` → `main` to deploy to production hosts. Never run a local merge into `main`, and never run `git push origin main`.
 
+
+### PR checks and reboot gate
+
+`.github/workflows/pr-checks.yml` runs on every PR:
+
+- `tests`: `nix flake check`, the live-sports-epg Node tests, and `tests/*.sh`.
+- `deploy-impact`: runs `scripts/change-impact.sh <base> <head>`, which evals every host at both revisions (no builds) and posts a PR comment listing, per host, whether kernel/initrd/kernel-modules/NVIDIA userspace changed (**reboot required**), which systemd units will restart, and whether `.sops.yaml`/`secrets/` changed. If any host needs a reboot the check **fails** until the PR carries the `approved-for-downtime` label; add it only when a maintenance window is agreed. Service restarts and secrets changes are warnings only.
+
+To make this a hard gate, require both checks in the `main` branch-protection rules. Run the report locally with `scripts/change-impact.sh origin/main HEAD` (exit 2 = reboot-class change).
+
 ## Common mistakes to avoid
 
 - **Do not "fix" problems that were already fixed.** Check `git log` and verify the current state of the file, not just the issue body. The issue body is a snapshot; the codebase may have already moved.
