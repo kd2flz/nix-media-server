@@ -395,6 +395,8 @@ Push to the appropriate branch (`main` for production, `dev` for T29769 sandbox)
 
 ## Git workflow
 
+**Agents never push or merge to `main`.** All agent changes land on `dev`; production is promoted only by raising a `dev` → `main` GitHub pull request. The `main` references below describe manual/human deployment, not agent actions.
+
 - Push to `dev` → T29769 only.
 - Push to `main` → all other hosts.
 - Use `Refs #<issue>` in commits to reference without closing. Only use `Closes #<issue>` when the user explicitly asks. Never close issues proactively.
@@ -404,7 +406,7 @@ Push to the appropriate branch (`main` for production, `dev` for T29769 sandbox)
 When the agent proposes a code change:
 
 1. **Ask first.** Do not comment on GitHub issues, close issues, merge, or push code without the user's explicit approval.
-2. **Branch before editing.** Before making any file changes, create a feature branch named `<initials>/<descriptive-slug>` (e.g. `dr/fix-audiobookshelf-cert-chain`). Work from the appropriate base branch (`dev` for sandbox, `main` for production).
+2. **Branch before editing.** Before making any file changes, create a feature branch named `<initials>/<descriptive-slug>` (e.g. `dr/fix-audiobookshelf-cert-chain`). **Always branch from `dev`.** Agents must never branch from, commit to, merge into, or push `main` — production reaches `main` only through a `dev` → `main` pull request.
 3. **Commit incrementally.** Commit each logical change individually to the feature branch. Use `Refs #<issue>` in commit messages when relevant. Never include secrets or passwords in plaintext in commit history.
 4. **Present for review — mandatory gate.** The agent must stop and obtain the user's explicit approval before merging OR pushing any change. This is a hard gate with no exceptions: it applies to every change, including bug fixes, one-line corrections, and documentation edits, not just features. Approval for one change never authorizes the next. Present a review block:
    - Branch name and base branch
