@@ -27,7 +27,9 @@ printf 'shutdown %s\n' "$*" >> "${CALLS:?CALLS is required}"
 EOF
 chmod +x "$tmp/bin/"*
 
-real_script="$(nix eval --raw "$repo#nixosConfigurations.T29769.config.systemd.services.nixos-auto-reboot.script")"
+hosts="$(nix eval --raw "$repo#nixosConfigurations" --apply 'x: builtins.concatStringsSep " " (builtins.attrNames x)' 2>/dev/null)"
+host="${hosts%% *}"   # the script comes from modules/common.nix, so any host works
+real_script="$(nix eval --raw "$repo#nixosConfigurations.$host.config.systemd.services.nixos-auto-reboot.script")"
 grep -q '/run/current-system' <<<"$real_script" || {
   echo 'FAIL: generated script does not compare against /run/current-system' >&2
   exit 1

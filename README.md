@@ -605,6 +605,15 @@ sudo mount -t cifs //<hostname>/media /mnt/media \
 
 To make this a hard gate, require both checks in the `main` branch-protection rules. Run the report locally with `scripts/change-impact.sh origin/main HEAD` (exit 2 = reboot-class change).
 
+
+## Testing
+
+```bash
+./tests/run-all.sh   # flake check + Node tests + every tests/*.sh harness
+```
+
+Every change ships with the test that would catch its failure mode; see "Testing requirements" in [CLAUDE.md](CLAUDE.md) for what to add for each kind of change. Tests never hardcode hostnames; they discover hosts from the flake.
+
 ## GitOps Deployment with Comin
 
 **Comin** is a pull-based deployment tool for NixOS. Each host runs a small agent that **polls your Git repo** and **automatically applies** the NixOS configuration associated with that machine (via flake outputs). It supports **testing branches per host**, **multi-remote polling**, and **safe deployments** you can roll back easily.
