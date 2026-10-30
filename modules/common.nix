@@ -47,9 +47,12 @@
       coreutils = "${pkgs.coreutils}";
       systemd = "${config.systemd.package}";
     in ''
-      # Compare boot-critical components (same logic as NixOS autoUpgrade module)
+      # Compare boot-critical components against the active generation.
+      # Comin activates generations via /run/current-system but does not
+      # update /nix/var/nix/profiles/system, so comparing against that stale
+      # profile would always report a reboot as pending.
       booted="$(readlink /run/booted-system/{initrd,kernel,kernel-modules} 2>/dev/null || true)"
-      built="$(readlink /nix/var/nix/profiles/system/{initrd,kernel,kernel-modules} 2>/dev/null || true)"
+      built="$(readlink /run/current-system/{initrd,kernel,kernel-modules} 2>/dev/null || true)"
 
       if [ "$booted" = "$built" ]; then
         echo "Boot-critical packages are up to date, no reboot needed."

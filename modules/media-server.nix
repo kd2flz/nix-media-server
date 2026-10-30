@@ -702,7 +702,10 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
             "--name=dispatcharr"
             "--network=host"
           ] ++ lib.optionals (cfg.gpu == "nvidia") [
-            "--gpus=all"
+            # Dispatcharr does not transcode, so it deliberately avoids
+            # `--gpus=all`. Requiring the NVIDIA CDI device would make it
+            # fail to start whenever a driver update leaves the kernel module
+            # and userspace out of sync until the next reboot.
             "--device=/dev/dri:/dev/dri"
           ] ++ lib.optionals (cfg.gpu == "intel") [
             "--device=/dev/dri:/dev/dri"
@@ -839,6 +842,10 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
         } // lib.optionalAttrs (cfg.liveSportsEpg.upcomingMaxHours != null) {
           UPCOMING_MAX_HOURS = toString cfg.liveSportsEpg.upcomingMaxHours;
         };
+        # Back off instead of hammering restart every 10s when the upstream
+        # M3U endpoint is down (previously produced thousands of restarts).
+        startLimitIntervalSec = 600;
+        startLimitBurst = 10;
         serviceConfig = {
           Type = "simple";
           User = "live-sports-epg";
@@ -846,7 +853,7 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
           EnvironmentFile = "/run/live-sports-epg/env";
           ExecStart = "${pkgs.nodejs}/bin/node ${liveSportsEpgSrc}/src/cli.js";
           Restart = "on-failure";
-          RestartSec = "10s";
+          RestartSec = "30s";
           # Hardening — the service only needs network + its own state/cache dirs.
           NoNewPrivileges = true;
           ProtectSystem = "strict";

@@ -22,6 +22,48 @@ in
       enable = true;
       listenAddress = "127.0.0.1";
       port = 9100;
+      # Pick up custom gauges (e.g. NVIDIA driver health) written by small
+      # oneshot services.
+      extraFlags = [ "--collector.textfile.directory=/var/lib/node-exporter/textfile" ];
+    };
+
+    systemd.tmpfiles.rules = [
+      "d /var/lib/node-exporter/textfile 0755 root root - -"
+    ];
+
+    # NVIDIA driver health. A kernel/userspace version mismatch is the failure
+    # mode that stops GPU containers (and previously broke Dispatcharr) until
+    # the next reboot, so export it as a gauge for alerting.
+    systemd.services.nvidia-driver-check = lib.mkIf ((mediaCfg.gpu or "none") == "nvidia") {
+      description = "Export NVIDIA driver health to node_exporter textfile";
+      serviceConfig = {
+        Type = "oneshot";
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        ReadWritePaths = [ "/var/lib/node-exporter/textfile" ];
+      };
+      script = ''
+        if ${config.hardware.nvidia.package}/bin/nvidia-smi -L >/dev/null 2>&1; then
+          ok=1
+        else
+          ok=0
+        fi
+        now="$(${pkgs.coreutils}/bin/date +%s)"
+        out=/var/lib/node-exporter/textfile/nvidia_driver.prom
+        printf '# HELP nvidia_driver_ok 1 if nvidia-smi succeeds (kernel/userspace driver match)\n# TYPE nvidia_driver_ok gauge\nnvidia_driver_ok %s\n# HELP nvidia_driver_last_check_timestamp_seconds Unix time of the last NVIDIA health check\n# TYPE nvidia_driver_last_check_timestamp_seconds gauge\nnvidia_driver_last_check_timestamp_seconds %s\n' "$ok" "$now" \
+          > "$out.tmp"
+        ${pkgs.coreutils}/bin/mv "$out.tmp" "$out"
+      '';
+    };
+
+    systemd.timers.nvidia-driver-check = lib.mkIf ((mediaCfg.gpu or "none") == "nvidia") {
+      description = "Periodic NVIDIA driver health check";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "2m";
+        OnUnitActiveSec = "5m";
+      };
     };
 
     services.prometheus.exporters.blackbox = {
@@ -115,6 +157,30 @@ in
         {
           job_name = "comin";
           static_configs = [ { targets = [ "127.0.0.1:4243" ]; } ];
+        }
+      ] ++ lib.optionals (mediaCfg.dispatcharr.enable or false) [
+        {
+          job_name = "dispatcharr";
+          metrics_path = "/probe";
+          params = { module = [ "http_2xx" ]; };
+          static_configs = [ { targets = [ "http://127.0.0.1:9191" ]; } ];
+          relabel_configs = [
+            { source_labels = [ "__address__" ]; target_label = "__param_target"; }
+            { source_labels = [ "__param_target" ]; target_label = "instance"; }
+            { target_label = "__address__"; replacement = "127.0.0.1:9115"; }
+          ];
+        }
+      ] ++ lib.optionals ((mediaCfg.liveSportsEpg.enable or false) && ((mediaCfg.liveSportsEpg.listenPort or 0) > 0)) [
+        {
+          job_name = "live-sports-epg";
+          metrics_path = "/probe";
+          params = { module = [ "http_2xx" ]; };
+          static_configs = [ { targets = [ "http://127.0.0.1:${toString mediaCfg.liveSportsEpg.listenPort}" ]; } ];
+          relabel_configs = [
+            { source_labels = [ "__address__" ]; target_label = "__param_target"; }
+            { source_labels = [ "__param_target" ]; target_label = "instance"; }
+            { target_label = "__address__"; replacement = "127.0.0.1:9115"; }
+          ];
         }
       ] ++ lib.optionals (config.services.speechToText.enable or false) [
         {
@@ -623,6 +689,111 @@ in
                 annotations = {
                   summary = "Speech-to-text is down";
                   description = "Speech-to-text has been unavailable for 2 minutes";
+                };
+                labels = { severity = "critical"; };
+              }
+            ] ++ lib.optionals (mediaCfg.dispatcharr.enable or false) [
+              {
+                uid = "dispatcharr-down";
+                title = "Dispatcharr Down";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  relativeTimeRange = {
+                    from = 120;
+                    to = 0;
+                  };
+                  datasourceUid = "PBFA97CFB590B2093";
+                  model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "PBFA97CFB590B2093";
+                    };
+                    expr = "probe_success{job=\"dispatcharr\"} == 0";
+                    instant = true;
+                    interval = null;
+                    intervalMs = 15000;
+                    maxDataPoints = 43200;
+                    range = false;
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "2m";
+                annotations = {
+                  summary = "Dispatcharr is down";
+                  description = "Dispatcharr has been unavailable for 2 minutes";
+                };
+                labels = { severity = "critical"; };
+              }
+            ] ++ lib.optionals ((mediaCfg.liveSportsEpg.enable or false) && ((mediaCfg.liveSportsEpg.listenPort or 0) > 0)) [
+              {
+                uid = "live-sports-epg-down";
+                title = "Live Sports EPG Down";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  relativeTimeRange = {
+                    from = 120;
+                    to = 0;
+                  };
+                  datasourceUid = "PBFA97CFB590B2093";
+                  model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "PBFA97CFB590B2093";
+                    };
+                    expr = "probe_success{job=\"live-sports-epg\"} == 0";
+                    instant = true;
+                    interval = null;
+                    intervalMs = 15000;
+                    maxDataPoints = 43200;
+                    range = false;
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "2m";
+                annotations = {
+                  summary = "Live sports EPG is down";
+                  description = "live-sports-epg has been unavailable for 2 minutes";
+                };
+                labels = { severity = "warning"; };
+              }
+            ] ++ lib.optionals ((mediaCfg.gpu or "none") == "nvidia") [
+              {
+                uid = "nvidia-driver-mismatch";
+                title = "NVIDIA Driver Mismatch";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  relativeTimeRange = {
+                    from = 300;
+                    to = 0;
+                  };
+                  datasourceUid = "PBFA97CFB590B2093";
+                  model = {
+                    datasource = {
+                      type = "prometheus";
+                      uid = "PBFA97CFB590B2093";
+                    };
+                    expr = "nvidia_driver_ok == 0 or (time() - nvidia_driver_last_check_timestamp_seconds) > 900 or absent(nvidia_driver_last_check_timestamp_seconds)";
+                    instant = true;
+                    interval = null;
+                    intervalMs = 15000;
+                    maxDataPoints = 43200;
+                    range = false;
+                    refId = "A";
+                  };
+                }];
+                noDataState = "Alerting";
+                execErrState = "Alerting";
+                for = "5m";
+                annotations = {
+                  summary = "NVIDIA driver unhealthy";
+                  description = "nvidia-smi is failing (kernel/userspace version mismatch) or the health check has not run for 15 minutes. GPU containers may be broken until a reboot.";
                 };
                 labels = { severity = "critical"; };
               }

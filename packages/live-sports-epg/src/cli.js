@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+import { readFile } from 'node:fs/promises';
 import { loadConfig } from './config/loader.js';
 import { EpgService } from './server/orchestrator.js';
 import { startHttpServer } from './server/http.js';
@@ -19,6 +20,21 @@ async function main() {
   });
 
   const service = new EpgService(cfg);
+
+  // Seed the in-memory fallback from the last good output so a restart while
+  // an upstream (Dispatcharr) is unavailable can still serve the previous
+  // guide instead of exiting and restart-looping.
+  try {
+    const cached = await readFile(cfg.outputPath, 'utf8');
+    if (cached.trim()) {
+      service.lastEpgText = cached;
+      log.info('Seeded EPG fallback from existing output', {
+        outputPath: cfg.outputPath,
+      });
+    }
+  } catch {
+    // No previous output to fall back on.
+  }
 
   // Initial refresh; if it fails outright (no fallback to serve), exit
   // non-zero so the systemd unit flags the failure.
