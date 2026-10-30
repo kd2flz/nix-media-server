@@ -62,7 +62,7 @@
       current_hour="$(${coreutils}/bin/date +%H)"
       if [ "$current_hour" -ge 3 ] && [ "$current_hour" -lt 5 ]; then
         # Warn logged-in users
-        ${coreutils}/bin/wall "NixOS upgrade requires reboot. System will reboot in 1 minute. Run 'sudo shutdown -c' to cancel."
+        ${pkgs.util-linux}/bin/wall "NixOS upgrade requires reboot. System will reboot in 1 minute. Run 'sudo shutdown -c' to cancel."
         echo "Rebooting in 1 minute..."
         ${systemd}/bin/shutdown -r +1 "NixOS upgrade requires reboot"
       else
