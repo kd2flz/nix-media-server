@@ -51,6 +51,18 @@
     wizarr.enable = true;
     nanitor.enable = true;
 
+    # TEMP: fault-injection test. Revert after the T29769 test run.
+    dispatcharr.enable = true;
+    liveSportsEpg = {
+      enable = true;
+      m3uUrlFile = pkgs.writeText "t29769-test-m3u-url" "http://127.0.0.1:18080/live.m3u";
+      listenPort = 8098;
+      refreshMinutes = 1;
+      lookAheadDays = 1;
+      sports = [ "MLB" ];
+      upcoming = false;
+    };
+
     kace.enable = true;
     kace.hostFile = config.sops.secrets.kace_host_t29769.path;
     kace.packageUrl = "https://github.com/kd2flz/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
