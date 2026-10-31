@@ -5,6 +5,11 @@
 #
 #   scripts/change-impact.sh <base-rev> <head-rev>   (default: origin/main HEAD)
 #
+# The comparison starts at the merge base of the two revisions, not at the base
+# tip. A base branch can contain commits that were never merged back into the
+# head branch (e.g. a main-only hotfix); diffing tips would report those as
+# reversions and invent restarts/reboots that the change does not introduce.
+#
 # Writes a Markdown report to stdout. Exit codes:
 #   0  no reboot-class change
 #   2  at least one host needs a reboot (kernel, initrd, kernel modules, NVIDIA)
@@ -12,9 +17,11 @@
 # exit code.
 set -euo pipefail
 
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# CHANGE_IMPACT_REPO is a test seam for tests/change-impact-check.sh.
+repo="${CHANGE_IMPACT_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 base="$(git -C "$repo" rev-parse "${1:-origin/main}")"
 head="$(git -C "$repo" rev-parse "${2:-HEAD}")"
+compare_base="$(git -C "$repo" merge-base "$base" "$head")"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
@@ -46,10 +53,14 @@ snapshot() {
 
 reboot_hosts=0
 {
-  echo "## Deploy impact: \`${base:0:7}\` -> \`${head:0:7}\`"
+  echo "## Deploy impact: \`${compare_base:0:7}\` -> \`${head:0:7}\`"
   echo
+  if [ "$compare_base" != "$base" ]; then
+    echo "> \`${base:0:7}\` is not an ancestor of the head; comparing from merge base \`${compare_base:0:7}\` so base-branch-only commits are not treated as reversions."
+    echo
+  fi
   for host in $hosts; do
-    if ! snapshot "$base" "$host" > "$tmp/$host.base" 2>/dev/null; then
+    if ! snapshot "$compare_base" "$host" > "$tmp/$host.base" 2>/dev/null; then
       echo "### $host: not evaluable at base (new host?), skipped"
       echo
       continue
@@ -91,7 +102,7 @@ reboot_hosts=0
     fi
   done
 
-  secrets="$(git -C "$repo" diff --name-only "$base" "$head" -- .sops.yaml secrets/)"
+  secrets="$(git -C "$repo" diff --name-only "$compare_base" "$head" -- .sops.yaml secrets/)"
   if [ -n "$secrets" ]; then
     echo "### Warning: secrets/host-key files changed"
     echo
