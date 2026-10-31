@@ -612,7 +612,7 @@ To make this a hard gate, require both checks in the `main` branch-protection ru
 ./tests/run-all.sh   # flake check + Node tests + every tests/*.sh harness
 ```
 
-Every change ships with the test that would catch its failure mode; see "Testing requirements" in [CLAUDE.md](CLAUDE.md) for what to add for each kind of change. Tests never hardcode hostnames; they discover hosts from the flake.
+Every change ships with the test that would catch its failure mode; see "Testing requirements" in [AGENTS.md](AGENTS.md) for what to add for each kind of change. Tests never hardcode hostnames; they discover hosts from the flake.
 
 ## GitOps Deployment with Comin
 

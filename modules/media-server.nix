@@ -915,7 +915,7 @@ services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
       # its own sops secret: the SMA host is per-site (unlike Nanitor's shared
       # enroll token/endpoint), so each host's default.nix must declare its
       # own sops.secrets.kace_host_<host> and point kace.hostFile at it. See
-      # CLAUDE.md "Adding KACE to a host" for the full walkthrough.
+      # AGENTS.md "Quest KACE AMP agent" for the full walkthrough.
       #
       #   services.mediaServer.kace = {
       #     enable = true;
