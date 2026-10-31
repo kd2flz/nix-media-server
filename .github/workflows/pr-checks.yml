@@ -1,0 +1,65 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches: [main, dev]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+      - name: Run all tests
+        run: ./tests/run-all.sh
+
+  deploy-impact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+      - name: Compute deploy impact
+        id: impact
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set +e
+          ./scripts/change-impact.sh "$BASE_SHA" "$HEAD_SHA" > impact.md
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat impact.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Post report on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file impact.md --edit-last --create-if-none
+      - name: Gate on reboot-class changes
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          code="${{ steps.impact.outputs.code }}"
+          if [ "$code" = "2" ]; then
+            case ",$LABELS," in
+              *,approved-for-downtime,*)
+                echo "Reboot-class change approved for downtime via label."; exit 0 ;;
+              *)
+                echo "::error::This change reboots one or more hosts. Hold until a maintenance window, then add the 'approved-for-downtime' label."
+                exit 1 ;;
+            esac
+          elif [ "$code" != "0" ]; then
+            echo "::error::change-impact.sh failed (exit $code)"; exit 1
+          fi

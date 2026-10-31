@@ -13,6 +13,13 @@ nix flake check                   # Run flake checks
 nix eval --file . nixosConfigurations.T29769.config.system.build.toplevel.outPath
 ```
 
+### Run all tests
+```bash
+./tests/run-all.sh                # flake check + Node tests + tests/*.sh (same as CI)
+scripts/change-impact.sh origin/main HEAD   # reboot/restart impact; exit 2 = reboot-class change
+```
+Every change needs its own test; see CLAUDE.md "Testing requirements" for the change-type table. **Never hardcode hostnames in tests.**
+
 ### Add and Commit a Host
 ```bash
 git add hosts/<hostname>/default.nix hosts/<hostname>/hardware.nix

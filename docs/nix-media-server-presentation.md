@@ -208,6 +208,15 @@ Comin can activate a generation but **cannot reboot** — so `common.nix` adds
 `nixos-auto-reboot`: it compares booted vs. built kernel/initrd and reboots only in
 the **03:00–05:00** window (wall message, 1-minute grace, cancellable).
 
+**PR gate:** every PR runs `nix flake check`, the unit/shell tests, and
+`scripts/change-impact.sh`, which diffs each host's evaluated config and flags
+kernel/initrd/NVIDIA changes (reboot) and unit restarts. A reboot-class change
+fails the check until the PR is labelled `approved-for-downtime`.
+
+**Tests ship with changes:** `./tests/run-all.sh` runs flake check, Node tests and
+per-feature harnesses. Expectations are derived from each host's config, never
+hardcoded hostnames, so a new host is covered automatically.
+
 <!--
 [2:50] Comin is the heart of "why": T29769 is our canary, then changes promote to
 main via a PR. Auto-reboot is the piece Comin can't do — without it, kernel patches

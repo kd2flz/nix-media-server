@@ -393,6 +393,28 @@ Push to the appropriate branch (`main` for production, `dev` for T29769 sandbox)
 - `nix flake show` — confirm the new host appears in `nixosConfigurations`
 - On the host: `mount | grep /srv/media` and `btrfs filesystem usage /srv/media`
 
+
+## Testing requirements
+
+Run everything with `./tests/run-all.sh` (CI runs the same script). It runs `nix flake check`, the live-sports-epg Node tests, and every `tests/*.sh` harness. **Every change must ship with the test that would have caught the failure it guards against**, in the same PR.
+
+| If you add or change... | You must also... |
+|---|---|
+| A module option or a per-host toggle that adds/removes units, probes, alerts, or timers | Add a row to `tests/static-config.sh` that asserts the new wiring from the host's own config (`want` derived from the option, `got` from the evaluated config). |
+| A systemd service/timer script with real logic (shell in a `script = ''...''`) | Add a harness in `tests/<name>-check.sh` that extracts the script with `nix eval --raw`, swaps store paths/state dirs for stubs, and asserts each branch (see `reboot-check.sh`, `nvidia-check.sh`). |
+| `packages/live-sports-epg` code | Add or extend a `test/*.test.js` case (`node --test test/*.test.js`), including the failure path (upstream down, empty input, no cache). |
+| A new Grafana alert or Prometheus probe | Cover it in `static-config.sh`; the alert must say what happens on no data / stale data (`noDataState`), not only on a bad value. |
+| Anything that can change the kernel, initrd, kernel modules, or NVIDIA driver (`flake.lock`, `hardware.nvidia`, `boot.*`) | Nothing to add: `scripts/change-impact.sh` flags it on the PR and the `deploy-impact` check holds the merge until the `approved-for-downtime` label is added. Read the report before merging. |
+| A new host (`hosts/<name>/`) | Nothing to add: `static-config.sh` and `change-impact.sh` discover hosts from the flake. If the host needs a toggle the tests do not model yet, extend the test. |
+| A bug fix | Add a regression test that fails without the fix. |
+
+Rules for tests:
+
+- **Never hardcode hostnames.** Discover hosts with `nix eval --raw .#nixosConfigurations --apply 'x: builtins.concatStringsSep " " (builtins.attrNames x)'`, or pick the first host that has the feature (see `nvidia-check.sh`). Derive expectations from the host's config.
+- Tests must be **eval-only or stubbed**: no network, no real GPU, no root, no reboot.
+- A new `tests/*.sh` harness must be executable and exit non-zero on failure; `run-all.sh` picks it up automatically.
+- Things the tests cannot cover (kernel/driver behaviour, container image changes on `:latest`, whether `switch-to-configuration` succeeds) must be verified on T29769 via `dev` before the `dev` → `main` PR, and noted in the PR description.
+
 ## Git workflow
 
 **Agents never push or merge to `main`.** All agent changes land on `dev`; production is promoted only by raising a `dev` → `main` GitHub pull request. The `main` references below describe manual/human deployment, not agent actions.
@@ -417,6 +439,16 @@ When the agent proposes a code change:
 6. **Clean up after merge.** Once the feature branch is merged, delete the local copy (`git branch -d <branch>`). Never push feature branches to the remote — they exist locally only until merged.
 7. **Never merge or push to the target branch without explicit per-change approval.** Only merge your feature branch after the user has approved that specific change.
 8. **Promotion to `main` is via GitHub PR, never local.** After a feature branch is merged into `dev` and pushed, raise a GitHub pull request `dev` → `main` to deploy to production hosts. Never run a local merge into `main`, and never run `git push origin main`.
+
+
+### PR checks and reboot gate
+
+`.github/workflows/pr-checks.yml` runs on every PR:
+
+- `tests`: `nix flake check`, the live-sports-epg Node tests, and `tests/*.sh`.
+- `deploy-impact`: runs `scripts/change-impact.sh <base> <head>`, which evals every host at both revisions (no builds) and posts a PR comment listing, per host, whether kernel/initrd/kernel-modules/NVIDIA userspace changed (**reboot required**), which systemd units will restart, and whether `.sops.yaml`/`secrets/` changed. If any host needs a reboot the check **fails** until the PR carries the `approved-for-downtime` label; add it only when a maintenance window is agreed. Service restarts and secrets changes are warnings only.
+
+To make this a hard gate, require both checks in the `main` branch-protection rules. Run the report locally with `scripts/change-impact.sh origin/main HEAD` (exit 2 = reboot-class change).
 
 ## Common mistakes to avoid
 

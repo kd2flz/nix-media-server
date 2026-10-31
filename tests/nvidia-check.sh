@@ -19,14 +19,31 @@ echo 1700000000
 EOF
 chmod +x "$tmp/bin/"*
 
-real_script="$(nix eval --raw "$repo#nixosConfigurations.P27691.config.systemd.services.nvidia-driver-check.script")"
+host="$(nix eval --raw "$repo#nixosConfigurations" --apply '
+  x: builtins.concatStringsSep " "
+    (builtins.filter (h: x.${h}.config.services.mediaServer.gpu == "nvidia") (builtins.attrNames x))
+' 2>/dev/null | awk '{print $1}')"
+if [ -z "$host" ]; then
+  echo 'no host has gpu = "nvidia"; nothing to test'
+  exit 0
+fi
+
+real_script="$(nix eval --raw "$repo#nixosConfigurations.$host.config.systemd.services.nvidia-driver-check.script")"
 script="$tmp/script.sh"
 perl -pe '
   s#/nix/store/[^/]+-nvidia[^/]+/bin/nvidia-smi#'"$tmp"'/bin/nvidia-smi#g;
   s#/nix/store/[^/]+-coreutils[^/]+/bin/date#'"$tmp"'/bin/date#g;
   s#/var/lib/node-exporter/textfile#'"$tmp"'/textfile#g;
+  s#/nix/store/[^/]+-coreutils[^/]+/bin/(\w+)#$1#g;
 ' <<<"$real_script" > "$script"
 chmod +x "$script"
+
+# Any other store path would not exist on a clean CI runner; fail loudly.
+if grep -q '/nix/store/' "$script"; then
+  echo 'FAIL: unstubbed /nix/store path left in script:' >&2
+  grep -n '/nix/store/' "$script" >&2
+  exit 1
+fi
 
 run_case() {
   local nv_ok="$1" expect="$2"
@@ -42,7 +59,7 @@ run_case() {
 run_case 0 1
 run_case 1 0
 
-expr="$(nix eval --json "$repo#nixosConfigurations.P27691.config.services.grafana.provision.alerting.rules.settings" \
+expr="$(nix eval --json "$repo#nixosConfigurations.$host.config.services.grafana.provision.alerting.rules.settings" \
   | grep -o '"expr":"[^"]*"' | grep 'nvidia_driver' | head -1)"
 grep -q 'nvidia_driver_ok == 0' <<<"$expr"
 grep -q 'nvidia_driver_last_check_timestamp_seconds' <<<"$expr"
