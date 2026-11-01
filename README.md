@@ -601,7 +601,7 @@ sudo mount -t cifs //<hostname>/media /mnt/media \
 `.github/workflows/pr-checks.yml` runs on every PR:
 
 - `tests`: `nix flake check`, the live-sports-epg Node tests, and `tests/*.sh`.
-- `deploy-impact`: runs `scripts/change-impact.sh <base> <head>`, which evals every host at both revisions (no builds) and posts a PR comment listing, per host, whether kernel/initrd/kernel-modules/NVIDIA userspace changed (**reboot required**), which systemd units will restart, and whether `.sops.yaml`/`secrets/` changed. If any host needs a reboot the check **fails** until the PR carries the `approved-for-downtime` label; add it only when a maintenance window is agreed. Service restarts and secrets changes are warnings only.
+- `deploy-impact`: runs `scripts/change-impact.sh <base> <head>`, which evals every host at the head revision and the PR's merge base (no builds) and posts a PR comment listing, per host, whether kernel/initrd/kernel-modules/NVIDIA userspace changed (**reboot required**), which systemd units will restart, and whether `.sops.yaml`/`secrets/` changed. If any host needs a reboot the check **fails** until the PR carries the `approved-for-downtime` label; add it only when a maintenance window is agreed. Service restarts and secrets changes are warnings only.
 
 To make this a hard gate, require both checks in the `main` branch-protection rules. Run the report locally with `scripts/change-impact.sh origin/main HEAD` (exit 2 = reboot-class change).
 
@@ -612,7 +612,7 @@ To make this a hard gate, require both checks in the `main` branch-protection ru
 ./tests/run-all.sh   # flake check + Node tests + every tests/*.sh harness
 ```
 
-Every change ships with the test that would catch its failure mode; see "Testing requirements" in [CLAUDE.md](CLAUDE.md) for what to add for each kind of change. Tests never hardcode hostnames; they discover hosts from the flake.
+Every change ships with the test that would catch its failure mode; see "Testing requirements" in [AGENTS.md](AGENTS.md) for what to add for each kind of change. Tests never hardcode hostnames; they discover hosts from the flake.
 
 ## GitOps Deployment with Comin
 

@@ -207,6 +207,33 @@ describe('renderXmltv', () => {
     assert.equal(c, 1);
   });
 
+  it('prefers the matched team logo for the channel icon', () => {
+    // Provider tvg-logo is a single generic league badge for every game, so a
+    // matched channel must advertise the team's ESPN logo instead.
+    const entries = [{ tvgId: 'Reds @ Cubs-A', tvgName: 'Reds @ Cubs', tvgLogo: 'https://generic.league.png' }];
+    const match = {
+      event: {
+        id: '1', sport: { key: 'MLB', label: 'MLB' }, league: 'MLB',
+        startTime: '2026-08-30T22:50:00Z', endTime: null,
+        away: { name: 'Cincinnati Reds', abbreviation: 'CIN', logo: 'https://away.logo.png' },
+        home: { name: 'Chicago Cubs', abbreviation: 'CHC', logo: 'https://home.logo.png' },
+        status: { state: 'pre', detail: '' },
+        venue: null, broadcasts: [],
+      },
+      variant: 'A', confidence: 1, reason: {},
+    };
+    const xml = renderXmltv(entries, new Map([['Reds @ Cubs-A', { entry: entries[0], match }]]));
+    const channelBlock = xml.slice(xml.indexOf('<channel id="Reds @ Cubs-A">'));
+    assert.match(channelBlock, /<icon src="https:\/\/away\.logo\.png"\/>/);
+    assert.doesNotMatch(channelBlock.slice(0, channelBlock.indexOf('</channel>')), /generic\.league/);
+  });
+
+  it('falls back to the playlist logo for unmatched channels', () => {
+    const entries = [{ tvgId: 'Reds @ Cubs-A', tvgName: 'Reds @ Cubs', tvgLogo: 'https://generic.league.png' }];
+    const xml = renderXmltv(entries, new Map());
+    assert.match(xml, /<channel id="Reds @ Cubs-A">[\s\S]*?<icon src="https:\/\/generic\.league\.png"\/>[\s\S]*?<\/channel>/);
+  });
+
   it('emits an unmatched programme for entries without a match', () => {
     const entries = [{ tvgId: 'Lone @ Wolf-A', tvgName: 'Lone @ Wolf' }];
     const xml = renderXmltv(entries, new Map());

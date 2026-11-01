@@ -80,9 +80,37 @@ function tokens(name) {
   return normalizeTeamName(stripNoise(name)).split(' ').filter(Boolean);
 }
 function partialSide(rawTokens, evName) {
-  if (rawTokens.length === 0 || rawTokens.some((t) => t.length < 3)) return false;
+  if (rawTokens.length === 0) return false;
+  // A lone two-letter token ("LA", "NY") is too ambiguous to match on its own.
+  // Multi-word names can keep short tokens ("UT Rio Grande Valley").
+  if (rawTokens.length === 1 && rawTokens[0].length < 3) return false;
   const evTokens = tokens(evName);
   return rawTokens.every((t) => evTokens.includes(t));
+}
+
+/**
+ * Providers shorten some teams to the ESPN abbreviation (`NEV @ UCLA`), and
+ * the alias table only carries the majors. Treat a short single-token name as
+ * an abbreviation candidate so it can be compared to the event's own
+ * abbreviation.
+ */
+function abbreviationOf(value) {
+  const n = normalizeTeamName(value);
+  return /^[a-z0-9]{2,5}$/.test(n) ? n : '';
+}
+
+const ABBREV_SCORE = 0.8;
+
+/**
+ * Score how well one stream side matches one event side. Returns 0 when the
+ * sides do not match. Abbreviation and partial-token matches score below a
+ * full canonical-name match so an exact alias still wins a tie.
+ */
+function sideScore(rawCanon, rawAbbrev, rawTokens, evName, evCanon, evAbbrev) {
+  if (rawCanon && rawCanon === evCanon) return similarity(rawCanon, evCanon);
+  if (rawAbbrev && rawAbbrev === evAbbrev) return ABBREV_SCORE;
+  if (partialSide(rawTokens, evName)) return PARTIAL_SCORE;
+  return 0;
 }
 
 /**
@@ -127,6 +155,8 @@ export function matchStream(tvgId, events, { now = new Date() } = {}) {
 
   const awayCanon = resolveCanonical(awayRaw);
   const homeCanon = resolveCanonical(homeRaw);
+  const awayAbbrev = abbreviationOf(awayRaw);
+  const homeAbbrev = abbreviationOf(homeRaw);
   const awayTokens = tokens(awayRaw);
   const homeTokens = tokens(homeRaw);
 
@@ -136,24 +166,24 @@ export function matchStream(tvgId, events, { now = new Date() } = {}) {
     const evHomeName = ev.home?.name || '';
     const evAway = resolveCanonical(evAwayName);
     const evHome = resolveCanonical(evHomeName);
+    const evAwayAbbrev = abbreviationOf(ev.away?.abbreviation);
+    const evHomeAbbrev = abbreviationOf(ev.home?.abbreviation);
 
     // A match requires the *pair* to align. Allow swap so a home/away
     // mismatch doesn't kill the match (some providers label differently).
-    let sameSide = awayCanon === evAway && homeCanon === evHome;
-    let swapped = awayCanon === evHome && homeCanon === evAway;
-    let score;
-    if (sameSide || swapped) {
-      // Score against the orientation that actually matched, otherwise a
-      // swapped pair scores ~0 and gets rejected by the caller's threshold.
-      const awayScore = similarity(awayCanon, sameSide ? evAway : evHome);
-      const homeScore = similarity(homeCanon, sameSide ? evHome : evAway);
-      score = (awayScore + homeScore) / 2;
-    } else {
-      sameSide = partialSide(awayTokens, evAwayName) && partialSide(homeTokens, evHomeName);
-      swapped = partialSide(awayTokens, evHomeName) && partialSide(homeTokens, evAwayName);
-      if (!sameSide && !swapped) continue;
-      score = PARTIAL_SCORE;
-    }
+    const normalAway = sideScore(awayCanon, awayAbbrev, awayTokens, evAwayName, evAway, evAwayAbbrev);
+    const normalHome = sideScore(homeCanon, homeAbbrev, homeTokens, evHomeName, evHome, evHomeAbbrev);
+    const swappedAway = sideScore(awayCanon, awayAbbrev, awayTokens, evHomeName, evHome, evHomeAbbrev);
+    const swappedHome = sideScore(homeCanon, homeAbbrev, homeTokens, evAwayName, evAway, evAwayAbbrev);
+    const sameSide = normalAway > 0 && normalHome > 0;
+    const swapped = swappedAway > 0 && swappedHome > 0;
+    if (!sameSide && !swapped) continue;
+    // Prefer the normal orientation when both align, and score against the
+    // orientation that actually matched so a swapped pair still clears the
+    // caller's threshold.
+    const score = sameSide
+      ? (normalAway + normalHome) / 2
+      : (swappedAway + swappedHome) / 2;
     const rank = timeRank(ev, now);
     if (!best || score > best.confidence || (score === best.confidence && rank < best.rank)) {
       best = { event: ev, confidence: score, rank, swapped: !sameSide, reason: { awayCanon, homeCanon } };

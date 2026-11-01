@@ -37,10 +37,13 @@ describe('ESPN schedule fetch', () => {
       fetchImpl,
       retries: 0,
     });
-    assert.equal(urls.length, 3);
-    assert.ok(urls.every((u) => u.includes('groups=80')));
+    // NCAAF fetches both FBS (80) and FCS (81) for each date.
+    assert.equal(urls.length, 6);
+    assert.ok(urls.some((u) => u.includes('groups=80')));
+    assert.ok(urls.some((u) => u.includes('groups=81')));
+    // The same IDs come back from both groups; dedupe keeps one copy.
     assert.deepEqual(events.map((e) => e.id), ['1', '2', '3']);
-    assert.equal(failures.length, 1);
-    assert.equal(failures[0].date, '20260928');
+    assert.equal(failures.length, 2);
+    assert.ok(failures.every((f) => f.date === '20260928'));
   });
 });

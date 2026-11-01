@@ -13,7 +13,9 @@ export const SPORTS = {
   LIGUE_1: { espnSlug: 'soccer/fra.1', label: 'Ligue 1' },
   MLS: { espnSlug: 'soccer/usa.1', label: 'MLS' },
   WC: { espnSlug: 'soccer/fifa.world', label: 'World Cup' },
-  // Without `groups`, ESPN's college scoreboards return only Top-25 games.
-  NCAAF: { espnSlug: 'football/college-football', label: 'NCAAF', query: 'groups=80' },
+  // Without `groups`, ESPN's college scoreboards return only Top-25 games, and
+  // the parameter accepts a single group. Group 80 is FBS and 81 is FCS;
+  // providers carry both, so fetch each separately.
+  NCAAF: { espnSlug: 'football/college-football', label: 'NCAAF', queries: ['groups=80', 'groups=81'] },
   NCAAB: { espnSlug: 'basketball/mens-college-basketball', label: 'NCAAB', query: 'groups=50' },
 };
