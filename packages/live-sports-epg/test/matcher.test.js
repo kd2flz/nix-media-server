@@ -21,6 +21,14 @@ describe('normalizeTeamName', () => {
     assert.equal(normalizeTeamName(''), '');
     assert.equal(normalizeTeamName(null), '');
   });
+  it('splits run-together provider names', () => {
+    assert.equal(normalizeTeamName('UtahJazz'), 'utah jazz');
+    assert.equal(normalizeTeamName('CentralArkansas'), 'central arkansas');
+    assert.equal(normalizeTeamName('SELouisiana'), 'se louisiana');
+    assert.equal(normalizeTeamName('UT.Rio.Grande.Valley'), 'ut rio grande valley');
+    assert.equal(normalizeTeamName('SanJoséState'), 'san jose state');
+    assert.equal(normalizeTeamName('TexasA&M'), 'texas aandm');
+  });
 });
 
 describe('splitVariant', () => {
@@ -116,6 +124,27 @@ describe('matchStream', () => {
     assert.equal(r.variant, 'A');
   });
 
+  it('matches provider names with the spaces removed', () => {
+    // IPTV providers ship "UtahJazz @ PortlandTrailBlazers" with no spaces at
+    // all; before normalizeTeamName split camelCase this was a lookup miss and
+    // the game fell through to the 60-minute "unmatched" placeholder.
+    const events = [{
+      id: 'nba-1',
+      sport: { key: 'NBA', label: 'NBA' },
+      league: 'NBA',
+      startTime: '2026-10-31T23:00:00Z',
+      endTime: null,
+      away: { name: 'Utah Jazz', abbreviation: 'UTA' },
+      home: { name: 'Portland Trail Blazers', abbreviation: 'POR' },
+      status: { state: 'in', detail: 'Q2' },
+    }];
+    const r = matchStream('UtahJazz @ PortlandTrailBlazers', events, {
+      now: new Date('2026-11-01T00:00:00Z'),
+    });
+    assert.equal(r.matched, true);
+    assert.equal(r.event.id, 'nba-1');
+  });
+
   it('matches "Reds @ Cubs-H" with H variant', () => {
     const r = matchStream('Reds @ Cubs-H', sampleEvents);
     assert.equal(r.matched, true);
@@ -127,6 +156,26 @@ describe('matchStream', () => {
     const r = matchStream('CIN @ CHC-A', sampleEvents);
     assert.equal(r.matched, true);
     assert.equal(r.event.id, '1');
+  });
+
+  it('matches ESPN abbreviations not carried in the alias table', () => {
+    // Providers often label non-major teams by abbreviation ("NEV @ UCLA");
+    // the alias table only covers the majors, so compare against the event's
+    // own abbreviation instead.
+    const events = [{
+      id: 'cfb-1',
+      sport: { key: 'NCAAF', label: 'NCAAF' },
+      league: 'NCAAF',
+      startTime: '2026-10-31T23:00:00Z',
+      endTime: null,
+      away: { name: 'UCLA Bruins', abbreviation: 'UCLA' },
+      home: { name: 'Nevada Wolf Pack', abbreviation: 'NEV' },
+      status: { state: 'pre', detail: '' },
+    }];
+    const r = matchStream('NEV @ UCLA', events);
+    assert.equal(r.matched, true);
+    assert.equal(r.event.id, 'cfb-1');
+    assert.ok(r.confidence >= 0.5);
   });
 
   it('returns matched:false for empty input', () => {
@@ -185,6 +234,22 @@ describe('matchStream', () => {
     const r = matchStream('Bears @ York', events, { now });
     assert.ok(r.confidence >= 0.5 && r.confidence < 1);
     assert.equal(r.swapped, true);
+  });
+
+  it('matches multi-word names that contain a short leading token', () => {
+    // "UT.Rio.Grande.Valley" normalizes to "ut rio grande valley"; the "ut"
+    // token must not block the partial match.
+    const events = [{
+      id: 'fcs-1',
+      sport: { key: 'NCAAF', label: 'NCAAF' },
+      league: 'NCAAF',
+      startTime: '2026-10-31T23:00:00Z',
+      away: { name: 'UT Rio Grande Valley Vaqueros', abbreviation: 'UTRGV' },
+      home: { name: 'Lamar Cardinals', abbreviation: 'LAM' },
+    }];
+    const r = matchStream('UT.Rio.Grande.Valley @ Lamar', events);
+    assert.equal(r.matched, true);
+    assert.equal(r.event.id, 'fcs-1');
   });
 
   it('does not partially match on very short tokens', () => {

@@ -2,6 +2,10 @@
 
 /**
  * Normalize a team name for fuzzy matching:
+ *  - split run-together words ("UtahJazz" → "Utah Jazz", "SELouisiana" →
+ *    "SE Louisiana", "UT.Rio.Grande" → "UT Rio Grande"); IPTV providers
+ *    routinely drop the spaces, and without this every such name is a
+ *    lookup miss
  *  - lowercase
  *  - strip diacritics
  *  - collapse whitespace
@@ -13,6 +17,9 @@
 export function normalizeTeamName(name) {
   if (!name) return '';
   return String(name)
+    .replace(/(\p{Ll})(\p{Lu})/gu, '$1 $2')     // camelCase boundary
+    .replace(/(\p{Lu}+)(\p{Lu}\p{Ll})/gu, '$1 $2') // acronym boundary (SELouisiana)
+    .replace(/[._]+/g, ' ')                      // separators used by providers
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // strip diacritics

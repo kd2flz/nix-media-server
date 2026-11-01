@@ -140,19 +140,22 @@ export async function fetchAllEvents({
       continue;
     }
     const seen = new Set();
+    const queries = sport.queries || [sport.query];
     for (const date of dates.length > 0 ? dates : [undefined]) {
-      try {
-        const url = urlFor(sport.espnSlug, date, sport.query);
-        const data = await fetchJson(url, { fetchImpl, timeoutMs, retries });
-        const raw = Array.isArray(data?.events) ? data.events : [];
-        for (const r of raw) {
-          const ev = shapeEvent(r, sport);
-          if (!ev || seen.has(ev.id)) continue;
-          seen.add(ev.id);
-          events.push(ev);
+      for (const query of queries) {
+        try {
+          const url = urlFor(sport.espnSlug, date, query);
+          const data = await fetchJson(url, { fetchImpl, timeoutMs, retries });
+          const raw = Array.isArray(data?.events) ? data.events : [];
+          for (const r of raw) {
+            const ev = shapeEvent(r, sport);
+            if (!ev || seen.has(ev.id)) continue;
+            seen.add(ev.id);
+            events.push(ev);
+          }
+        } catch (err) {
+          failures.push({ sport: key, date, query, error: err.message });
         }
-      } catch (err) {
-        failures.push({ sport: key, date, error: err.message });
       }
     }
     if (onProgress) onProgress({ sport: key, count: events.length });

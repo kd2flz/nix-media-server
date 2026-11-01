@@ -259,7 +259,16 @@ export function renderXmltv(entries, matches, opts = {}) {
   const upcomingEnabled = opts.upcoming !== false;
 
   const channelsXml = entries
-    .map((e) => renderChannel(e.tvgId, e.tvgName || e.name, e.tvgLogo))
+    .map((e) => {
+      // Prefer the matched team's logo over the playlist's tvg-logo. Many
+      // providers ship one generic league badge for every game, and
+      // Dispatcharr applies the <channel> icon to the channel record — so a
+      // generic tvg-logo means every game looks the same (or has no image at
+      // all when the provider omits it).
+      const m = matches.get(e.tvgId);
+      const teamLogo = m ? feedTeam(m.match.event, m.match.variant)?.logo : null;
+      return renderChannel(e.tvgId, e.tvgName || e.name, teamLogo || e.tvgLogo);
+    })
     .join('\n');
 
   const programmesXml = entries

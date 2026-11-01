@@ -27,14 +27,21 @@ other XMLTV-compatible IPTV client.
 ## How matching works
 
 `Reds @ Cubs-A` is split as `{ variant: 'A', event: 'Reds @ Cubs' }`,
-then the event is split into `['Reds', 'Cubs']`. Each team is normalized
-(lowercase, diacritics stripped, common noise words removed) and looked
-up in an alias table. The pair is compared against every ESPN event for
-the look-ahead window using structural similarity; the best match wins,
-as long as both teams aligned in the right order (or swapped — some
-providers label away/home differently). Streams the matcher can't pair
-with an event are still emitted as `<channel>` entries plus a 60-minute
-"unmatched" `<programme>`, so Dispatcharr doesn't lose the channel.
+then the event is split into `['Reds', 'Cubs']`. Each team is normalized —
+run-together provider names like `UtahJazz` are split into `Utah Jazz`,
+then lowercased, diacritics stripped, common noise words removed — and
+looked up in an alias table. A short single-token name (`NEV @ UCLA`) is
+also compared to ESPN's team abbreviation, and the side is accepted if all
+of its words appear in the event team's full name. The pair is compared
+against every ESPN event for the look-ahead window using structural
+similarity; the best match wins, as long as both teams aligned in the
+right order (or swapped — some providers label away/home differently).
+Streams the matcher can't pair with an event are still emitted as
+`<channel>` entries plus a 60-minute "unmatched" `<programme>`, so
+Dispatcharr doesn't lose the channel.
+
+College football is fetched from both ESPN division groups (FBS `80` and
+FCS `81`) because providers carry games from both.
 
 ## Upcoming (pre-game) block
 
