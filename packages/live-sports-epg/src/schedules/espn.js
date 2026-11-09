@@ -2,19 +2,22 @@
 
 import { SPORTS } from '../types/sports.js';
 
-const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports';
+export const DEFAULT_ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports';
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 /**
  * Build the ESPN scoreboard URL for a given sport. `date` is a single YYYYMMDD
  * day (ESPN rejects ranges with HTTP 400); if omitted, ESPN returns only its
  * "current" slate (today for MLB/NHL, this week for NFL).
+ *
+ * `base` is overridable so the NixOS VM test can point at a local fixture
+ * server and run entirely offline.
  */
-function urlFor(espnSlug, date, query) {
+function urlFor(espnSlug, date, query, base = DEFAULT_ESPN_BASE) {
   const params = ['limit=500'];
   if (query) params.push(query);
   if (date) params.push(`dates=${date}`);
-  return `${ESPN_BASE}/${espnSlug}/scoreboard?${params.join('&')}`;
+  return `${String(base).replace(/\/+$/, '')}/${espnSlug}/scoreboard?${params.join('&')}`;
 }
 
 /**
@@ -123,6 +126,7 @@ function shapeEvent(raw, sport) {
 export async function fetchAllEvents({
   sports = Object.keys(SPORTS),
   dates = [],                  // e.g. ['20260830', '20260831'] for lookahead window
+  espnBaseUrl,                 // test override; defaults to the public ESPN API
   fetchImpl,
   timeoutMs,
   retries,
@@ -144,7 +148,7 @@ export async function fetchAllEvents({
     for (const date of dates.length > 0 ? dates : [undefined]) {
       for (const query of queries) {
         try {
-          const url = urlFor(sport.espnSlug, date, query);
+          const url = urlFor(sport.espnSlug, date, query, espnBaseUrl);
           const data = await fetchJson(url, { fetchImpl, timeoutMs, retries });
           const raw = Array.isArray(data?.events) ? data.events : [];
           for (const r of raw) {

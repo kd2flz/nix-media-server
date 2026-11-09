@@ -33,6 +33,7 @@ const ENV = {
   LOG_LEVEL: 'LOG_LEVEL',
   FETCH_TIMEOUT_MS: 'FETCH_TIMEOUT_MS',
   FETCH_RETRIES: 'FETCH_RETRIES',
+  ESPN_BASE_URL: 'ESPN_BASE_URL',
   CONFIG_FILE: 'CONFIG_FILE',
   UPCOMING: 'UPCOMING',
   UPCOMING_MAX_HOURS: 'UPCOMING_MAX_HOURS',
@@ -78,6 +79,8 @@ export function loadConfig() {
     logLevel: (fromFile.logLevel || process.env[ENV.LOG_LEVEL] || 'info').toLowerCase(),
     fetchTimeoutMs: num(fromFile.fetchTimeoutMs ?? process.env[ENV.FETCH_TIMEOUT_MS], 10_000),
     fetchRetries: num(fromFile.fetchRetries ?? process.env[ENV.FETCH_RETRIES], 1),
+    // Test-only override; unset means use the public ESPN API.
+    espnBaseUrl: fromFile.espnBaseUrl || process.env[ENV.ESPN_BASE_URL] || undefined,
     cacheDir: fromFile.cacheDir || process.env.CACHE_DIR || '/var/cache/live-sports-epg',
     upcoming: bool(fromFile.upcoming ?? process.env[ENV.UPCOMING], true),
     upcomingMaxHours: fromFile.upcomingMaxHours != null || process.env[ENV.UPCOMING_MAX_HOURS] != null

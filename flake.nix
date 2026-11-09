@@ -75,6 +75,32 @@
       comin = comin.nixosModules.comin;
     };
 
+    # End-to-end check for the live-sports-epg service: boots a NixOS VM,
+    # serves fixture M3U + stubbed ESPN responses on loopback, and asserts the
+    # generated XMLTV matches mangled/hyphenated provider tvg-ids. Runs under
+    # QEMU software emulation when KVM is unavailable (CI).
+    checks.${system}.live-sports-epg-e2e =
+      let
+        # `testers.runNixOSTest` pins the VM's pkgs to this set, so overlays
+        # must be applied here rather than via `nixpkgs.overlays` in the node.
+        testPkgs = import nixpkgs {
+          inherit system;
+          overlays = [ nanitorOverlay kace-ampagent.overlays.default ];
+        };
+      in
+      import ./tests/live-sports-epg-e2e.nix {
+        pkgs = testPkgs;
+        lib = nixpkgs.lib;
+        # Import the raw modules (not the flake wrappers) to avoid conflicting
+        # `nixpkgs.overlays` definitions; both services stay disabled.
+        extraModules = [
+          nanitor.nixosModules.nanitor-agent
+          "${kace-ampagent.outPath}/modules/services/kace-ampagent.nix"
+          sops-nix.nixosModules.sops
+          comin.nixosModules.comin
+        ];
+      };
+
     nixosConfigurations =
       builtins.listToAttrs (map (host: {
         name = host;

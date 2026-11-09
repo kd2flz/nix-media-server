@@ -9,7 +9,8 @@
  *  - lowercase
  *  - strip diacritics
  *  - collapse whitespace
- *  - strip common punctuation (keep hyphens inside words)
+ *  - strip common punctuation, treating hyphens/dashes as word separators
+ *    (providers use "Indianapolis-Colts", "NewYork-Giants", en/em dashes)
  *  - expand a few common abbreviations
  *
  * The result is used as the *key* for alias lookup, never the display name.
@@ -20,6 +21,7 @@ export function normalizeTeamName(name) {
     .replace(/(\p{Ll})(\p{Lu})/gu, '$1 $2')     // camelCase boundary
     .replace(/(\p{Lu}+)(\p{Lu}\p{Ll})/gu, '$1 $2') // acronym boundary (SELouisiana)
     .replace(/[._]+/g, ' ')                      // separators used by providers
+    .replace(/[-\u2010-\u2015\u2212]+/g, ' ')    // hyphen/en/em dash as a space
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // strip diacritics

@@ -29,6 +29,17 @@ describe('normalizeTeamName', () => {
     assert.equal(normalizeTeamName('SanJoséState'), 'san jose state');
     assert.equal(normalizeTeamName('TexasA&M'), 'texas aandm');
   });
+  it('treats hyphens and dashes as word separators', () => {
+    assert.equal(normalizeTeamName('Indianapolis-Colts'), 'indianapolis colts');
+    assert.equal(normalizeTeamName('NewYork-Giants'), 'new york giants');
+    assert.equal(normalizeTeamName('Tampa-Bay-Lightning'), 'tampa bay lightning');
+    assert.equal(normalizeTeamName('Los Angeles\u2013Chargers'), 'los angeles chargers');
+    assert.equal(normalizeTeamName('Green Bay\u2014Packers'), 'green bay packers');
+    assert.equal(normalizeTeamName('New\u2011Jersey-Devils'), 'new jersey devils');
+    assert.equal(normalizeTeamName('Miami\u2212Heat'), 'miami heat');
+    assert.equal(normalizeTeamName('Paris Saint-Germain'), 'paris saint germain');
+    assert.equal(normalizeTeamName('San---Francisco'), 'san francisco');
+  });
 });
 
 describe('splitVariant', () => {
@@ -88,6 +99,19 @@ describe('resolveCanonical', () => {
     assert.equal(resolveCanonical('Yankees'), 'new york yankees');
     assert.equal(resolveCanonical('red sox'), 'boston red sox');
     assert.equal(resolveCanonical('Man Utd'), 'manchester united');
+  });
+  it('resolves hyphenated provider spellings', () => {
+    assert.equal(resolveCanonical('Indianapolis-Colts'), 'indianapolis colts');
+    assert.equal(resolveCanonical('New-York-Giants'), 'new york giants');
+    assert.equal(resolveCanonical('LosAngeles-Chargers'), 'los angeles chargers');
+    assert.equal(resolveCanonical('Tampa-Bay-Lightning'), 'tampa bay lightning');
+  });
+  it('resolves separator-only differences via the compact index', () => {
+    assert.equal(resolveCanonical('San-Francisco4-9ers'), 'san francisco 49ers');
+    assert.equal(resolveCanonical('New_York_Giants'), 'new york giants');
+    assert.equal(resolveCanonical('New.York.Giants'), 'new york giants');
+    assert.equal(resolveCanonical('St.Louis.Blues'), 'st louis blues');
+    assert.equal(resolveCanonical('Philadelphia76ers'), 'philadelphia 76ers');
   });
   it('returns normalized form for unknown teams', () => {
     assert.equal(resolveCanonical('St. Louis Bluebongs'), 'st louis bluebongs');
