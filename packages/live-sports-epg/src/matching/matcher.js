@@ -4,23 +4,43 @@ import { normalizeTeamName, splitVariant, splitTeams, stripNoise } from './norma
 import { ALIASES } from './aliases.js';
 
 /**
- * Build a reverse-lookup index from every alias (incl. canonical key) → canonical key.
- * Done once at module load for O(1) alias lookups.
+ * Whitespace/punctuation-free form of an already-normalized name. Providers
+ * drop, duplicate, or swap separators ("NewYork-Giants", "New_York_Giants",
+ * "San-Francisco4-9ers"), so comparing this form catches variants that the
+ * exact index misses without loosening the match any further.
+ */
+function compactNormalized(normalized) {
+  return normalized.replace(/[^a-z0-9]/g, '');
+}
+
+function compact(value) {
+  return compactNormalized(normalizeTeamName(value));
+}
+
+/**
+ * Build reverse-lookup indexes from every alias (incl. canonical key) →
+ * canonical key. Done once at module load for O(1) alias lookups.
+ * The compact index mirrors the exact index's insertion order so both
+ * resolve ambiguous aliases (e.g. "giants", "kings") the same way.
  */
 function buildIndex() {
   const idx = new Map();
+  const compactIdx = new Map();
   for (const [canonical, aliases] of Object.entries(ALIASES)) {
     const c = normalizeTeamName(canonical);
     idx.set(c, c);
+    compactIdx.set(compact(canonical), c);
     for (const a of aliases) {
       const n = normalizeTeamName(a);
       if (!idx.has(n)) idx.set(n, c);
+      const nCompact = compact(a);
+      if (nCompact && !compactIdx.has(nCompact)) compactIdx.set(nCompact, c);
     }
   }
-  return idx;
+  return { idx, compactIdx };
 }
 
-const ALIAS_INDEX = buildIndex();
+const { idx: ALIAS_INDEX, compactIdx: COMPACT_INDEX } = buildIndex();
 
 /**
  * Resolve a team name (in any form the M3U might use) to its canonical key.
@@ -31,6 +51,14 @@ export function resolveCanonical(name) {
   if (!name) return '';
   const direct = normalizeTeamName(stripNoise(name));
   if (ALIAS_INDEX.has(direct)) return ALIAS_INDEX.get(direct);
+
+  // Separator-insensitive fallback: "Indianapolis-Colts" and
+  // "San-Francisco4-9ers" normalize to names that differ from the curated
+  // spelling only by spaces/hyphens, so compare the compact forms.
+  const directCompact = compactNormalized(direct);
+  if (directCompact && COMPACT_INDEX.has(directCompact)) {
+    return COMPACT_INDEX.get(directCompact);
+  }
 
   // Word-subset fallback: "New York Yankees" → "yankees" → "new york yankees".
   // Require every word of the *shorter* side to appear as a whole word in
@@ -85,7 +113,15 @@ function partialSide(rawTokens, evName) {
   // Multi-word names can keep short tokens ("UT Rio Grande Valley").
   if (rawTokens.length === 1 && rawTokens[0].length < 3) return false;
   const evTokens = tokens(evName);
-  return rawTokens.every((t) => evTokens.includes(t));
+  if (rawTokens.every((t) => evTokens.includes(t))) return true;
+  // Providers also mangle digits and spacing ("San-Francisco4-9ers" →
+  // "san francisco4 9ers" vs ESPN's "san francisco 49ers").
+  if (rawTokens.join('') === evTokens.join('')) return true;
+  // Tolerate a provider dropping a plural suffix ("Boston Celtic").
+  const singular = (t) => (t.length >= 4 ? t.replace(/s$/, '') : t);
+  return rawTokens.every((t) => evTokens.some(
+    (e) => e === t || singular(e) === t || singular(t) === e,
+  ));
 }
 
 /**

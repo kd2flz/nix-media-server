@@ -23,6 +23,24 @@ describe('ESPN schedule fetch', () => {
     );
   });
 
+  it('uses an explicit ESPN base URL (for offline/end-to-end tests)', async () => {
+    const urls = [];
+    const fetchImpl = async (url) => {
+      urls.push(url);
+      return { ok: true, json: async () => ({ events: [] }) };
+    };
+    await fetchAllEvents({
+      sports: ['NFL'],
+      dates: ['20260926'],
+      espnBaseUrl: 'http://127.0.0.1:9192/espn///',
+      fetchImpl,
+      retries: 0,
+    });
+    assert.deepEqual(urls, [
+      'http://127.0.0.1:9192/espn/football/nfl/scoreboard?limit=500&dates=20260926',
+    ]);
+  });
+
   it('fetches once per date, dedupes, and keeps going when a day fails', async () => {
     const urls = [];
     const fetchImpl = async (url) => {

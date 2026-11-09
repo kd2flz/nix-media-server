@@ -65,6 +65,7 @@ export class EpgService {
           const { events: fresh, failures: esf } = await fetchAllEvents({
             sports: [sport],
             dates,
+            espnBaseUrl: this.cfg.espnBaseUrl,
             timeoutMs: this.cfg.fetchTimeoutMs,
             retries: this.cfg.fetchRetries,
           });

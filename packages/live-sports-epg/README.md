@@ -29,10 +29,15 @@ other XMLTV-compatible IPTV client.
 `Reds @ Cubs-A` is split as `{ variant: 'A', event: 'Reds @ Cubs' }`,
 then the event is split into `['Reds', 'Cubs']`. Each team is normalized —
 run-together provider names like `UtahJazz` are split into `Utah Jazz`,
-then lowercased, diacritics stripped, common noise words removed — and
-looked up in an alias table. A short single-token name (`NEV @ UCLA`) is
+hyphens and dashes are treated as spaces (`Indianapolis-Colts`,
+`NewYork–Giants`), then it is lowercased, diacritics stripped, common noise
+words removed — and looked up in an alias table. A separator-insensitive
+(compact) lookup catches variants that differ only by spaces or punctuation
+(`San-Francisco4-9ers` → `San Francisco 49ers`, `New_York_Giants`). A short
+single-token name (`NEV @ UCLA`) is
 also compared to ESPN's team abbreviation, and the side is accepted if all
-of its words appear in the event team's full name. The pair is compared
+of its words appear in the event team's full name (with compact and
+singular/plural variants tolerated). The pair is compared
 against every ESPN event for the look-ahead window using structural
 similarity; the best match wins, as long as both teams aligned in the
 right order (or swapped — some providers label away/home differently).
@@ -79,6 +84,7 @@ environment variables:
 | `fetchRetries` / `FETCH_RETRIES` | `1` | Per-request retry count |
 | `upcoming` / `UPCOMING` | `true` | Emit an "Upcoming:" placeholder before kickoff |
 | `upcomingMaxHours` / `UPCOMING_MAX_HOURS` | unset (no cap) | Cap how far before kickoff the placeholder reaches |
+| `espnBaseUrl` / `ESPN_BASE_URL` | unset (public ESPN API) | Override the scoreboard API base URL; used only by the offline end-to-end test |
 
 ## Endpoints (when `listenPort > 0`)
 
@@ -94,8 +100,13 @@ node src/cli.js
 ## Tests
 
 ```bash
-node --test test/
+node --test test/*.test.js
 ```
+
+The full service wiring is also covered by an offline NixOS VM test at the
+repository root (`nix build .#checks.x86_64-linux.live-sports-epg-e2e`). It
+boots the real systemd unit against a fixture M3U + stubbed ESPN API
+(`ESPN_BASE_URL`) and asserts real XMLTV output, with no network access.
 
 ## Adding a new sport
 
