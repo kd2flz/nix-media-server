@@ -1,0 +1,15 @@
+{
+  "name": "dispatcharr-epg-sync",
+  "version": "0.1.0",
+  "description": "Reconciles Dispatcharr EPG mappings against curated XMLTV ids and corrects known bad mappings.",
+  "private": true,
+  "type": "module",
+  "main": "src/sync.js",
+  "bin": { "dispatcharr-epg-sync": "src/sync.js" },
+  "scripts": {
+    "start": "node src/sync.js",
+    "test": "node --test test/"
+  },
+  "engines": { "node": ">=20" },
+  "license": "MIT"
+}

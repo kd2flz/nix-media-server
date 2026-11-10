@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "description": "Renovate config: bumps OCI image pins in Nix files. flake.lock is owned by Dependabot (package-ecosystem nix) to avoid duplicate PRs.",
+  "nix": {
+    "enabled": false
+  },
+  "lockFileMaintenance": {
+    "enabled": false
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "OCI image references in Nix files (image = \"registry/name:tag@sha256:...\")",
+      "managerFilePatterns": [
+        "/\\.nix$/"
+      ],
+      "matchStrings": [
+        "image\\s*=\\s*\"(?<depName>[^\"@\\s]+?):(?<currentValue>[^\"@\\s]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\""
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Emby uses :latest + podman-auto-update (io.containers.autoupdate label/timer); Renovate must not pin or fight runtime self-updates.",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "docker.io/emby/embyserver"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Group OCI image pin bumps in Nix files",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "groupName": "oci image pins (nix)"
+    }
+  ]
+}

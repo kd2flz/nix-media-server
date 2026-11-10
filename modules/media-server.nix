@@ -7,6 +7,7 @@ let
   # Whole package directory (not just cli.js) so its relative imports to
   # sibling modules resolve once copied into the Nix store.
   liveSportsEpgSrc = ../packages/live-sports-epg;
+  dispatcharrEpgSyncSrc = ../packages/dispatcharr-epg-sync;
 
   # Render a Caddy vhost with optional internal TLS (no global block required)
   vhost = host: upstream: ''
@@ -133,6 +134,81 @@ in
         refresh interval, otherwise new live-game channels sit without EPG data
         for part of their airtime.
       '';
+    };
+
+    dispatcharr.epgGrabber.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Run a pinned iptv-org/epg OCI container that generates a local XMLTV
+        guide from a curated channels list and serves it on loopback. Dispatcharr
+        imports it via a fully declarative XMLTV source (no web UI clicks).
+      '';
+    };
+
+    dispatcharr.epgGrabber.channelsFile = lib.mkOption {
+      type = lib.types.path;
+      default = ../packages/iptv-org-epg/channels.xml;
+      description = "Curated iptv-org/epg channels.xml mounted into the grabber.";
+    };
+
+    dispatcharr.epgGrabber.port = lib.mkOption {
+      type = lib.types.port;
+      default = 3000;
+      description = "Loopback port the grabber serves guide.xml on.";
+    };
+
+    dispatcharr.epgGrabber.cronSchedule = lib.mkOption {
+      type = lib.types.str;
+      default = "0 6 * * *";
+      description = "Cron schedule for refreshing the XMLTV guide.";
+    };
+
+    dispatcharr.epgGrabber.days = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 3;
+      description = "Number of days of guide data to grab.";
+    };
+
+    dispatcharr.epgGrabber.image = lib.mkOption {
+      type = lib.types.str;
+      default = "ghcr.io/iptv-org/epg@sha256:b5e8e3cfbcc098e6721f50a3b72dc9e639304d8f35b25cc3aab5f5fd063a7ff2";
+      description = "Pinned iptv-org/epg OCI image (linux/amd64).";
+    };
+
+    dispatcharr.epgSync.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Declarative Dispatcharr EPG reconciler: ensures the local grabber is
+        registered as an XMLTV source and corrects known bad epg_data_id
+        mappings (never touches correct mappings).
+      '';
+    };
+
+    dispatcharr.epgSync.apiKeyFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Dispatcharr API key file (X-API-Key). Reuse dispatcharr_mcp_api_key.";
+      example = lib.literalExpression "config.sops.secrets.dispatcharr_mcp_api_key.path";
+    };
+
+    dispatcharr.epgSync.channelMapFile = lib.mkOption {
+      type = lib.types.path;
+      default = ../packages/dispatcharr-epg-sync/data/channel-map.json;
+      description = "Declarative bad-mapping fix list consumed by the reconciler.";
+    };
+
+    dispatcharr.epgSync.intervalMinutes = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 30;
+      description = "How often to reconcile Dispatcharr EPG mappings.";
+    };
+
+    dispatcharr.epgSync.sourceName = lib.mkOption {
+      type = lib.types.str;
+      default = "local-guide";
+      description = "Dispatcharr EPG source name managed for the local grabber feed.";
     };
     liveSportsEpg.enable = lib.mkOption {
       type = lib.types.bool;
@@ -352,6 +428,14 @@ in
       {
         assertion = !cfg.liveSportsEpg.enable || cfg.liveSportsEpg.m3uUrlFile != null;
         message = "services.mediaServer.liveSportsEpg.enable = true requires liveSportsEpg.m3uUrlFile (a sops-decrypted path containing the M3U URL).";
+      }
+      {
+        assertion = !cfg.dispatcharr.epgSync.enable || cfg.dispatcharr.epgSync.apiKeyFile != null;
+        message = "services.mediaServer.dispatcharr.epgSync.enable = true requires dispatcharr.epgSync.apiKeyFile (reuse config.sops.secrets.dispatcharr_mcp_api_key.path).";
+      }
+      {
+        assertion = !cfg.dispatcharr.epgGrabber.enable || cfg.dispatcharr.epgGrabber.port > 0;
+        message = "services.mediaServer.dispatcharr.epgGrabber.port must be set when epgGrabber is enabled.";
       }
     ];
 
@@ -652,6 +736,9 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
           "d /var/lib/live-sports-epg 0750 live-sports-epg live-sports-epg - -"
           "d /var/cache/live-sports-epg 0750 live-sports-epg live-sports-epg - -"
         ])
+        (lib.mkIf cfg.dispatcharr.epgGrabber.enable [
+          "d /var/lib/iptv-org-epg 0755 root root - -"
+        ])
       ];
 
       virtualisation.oci-containers.containers.wizarr = lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false)) {
@@ -712,6 +799,33 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
           ];
         };
 
+      # Pinned iptv-org/epg grabber: produces guide.xml for Dispatcharr on loopback.
+      # State lives under /var/lib/iptv-org-epg (mounted at /epg/public); the
+      # curated channels list is copied in via preStart because the image reads
+      # /epg/sites/<site>/... config and /epg/public/channels.xml.
+      virtualisation.oci-containers.containers.iptv-org-epg = lib.mkIf cfg.dispatcharr.epgGrabber.enable {
+        image = cfg.dispatcharr.epgGrabber.image;
+        volumes = [
+          "/var/lib/iptv-org-epg:/epg/public"
+        ];
+        ports = [
+          "127.0.0.1:${toString cfg.dispatcharr.epgGrabber.port}:3000"
+        ];
+        environment = {
+          CRON_SCHEDULE = cfg.dispatcharr.epgGrabber.cronSchedule;
+          DAYS = toString cfg.dispatcharr.epgGrabber.days;
+          RUN_AT_STARTUP = "true";
+          TZ = config.time.timeZone or "UTC";
+        };
+        extraOptions = [ "--name=iptv-org-epg" ];
+      };
+
+      systemd.services.podman-iptv-org-epg = lib.mkIf cfg.dispatcharr.epgGrabber.enable {
+        preStart = ''
+          ${pkgs.coreutils}/bin/install -m 0644 ${cfg.dispatcharr.epgGrabber.channelsFile} /var/lib/iptv-org-epg/channels.xml
+        '';
+      };
+
       ########################################
       # Dispatcharr EPG auto-match (optional)
       ########################################
@@ -745,6 +859,42 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
         timerConfig = {
           OnBootSec = "5m";
           OnUnitActiveSec = "${toString cfg.dispatcharr.epgAutoMatch.intervalMinutes}m";
+          Persistent = true;
+        };
+      };
+
+      ########################################
+      # Dispatcharr EPG reconciler (optional)
+      ########################################
+      systemd.services.dispatcharr-epg-sync = lib.mkIf (cfg.dispatcharr.epgSync.enable && cfg.dispatcharr.epgSync.apiKeyFile != null) {
+        description = "Reconcile Dispatcharr EPG mappings and register the local grabber source";
+        after = [ "network-online.target" "podman-dispatcharr.service" ] ++ lib.optionals cfg.dispatcharr.epgGrabber.enable [ "podman-iptv-org-epg.service" ];
+        wants = [ "network-online.target" ];
+        environment = {
+          DISPATCHARR_URL = "http://127.0.0.1:9191";
+          DISPATCHARR_API_KEY_FILE = "/run/credentials/dispatcharr-epg-sync.service/apikey";
+          CHANNEL_MAP_FILE = cfg.dispatcharr.epgSync.channelMapFile;
+          EPG_SOURCE_NAME = cfg.dispatcharr.epgSync.sourceName;
+          EPG_SOURCE_URL = "http://127.0.0.1:${toString cfg.dispatcharr.epgGrabber.port}/guide.xml";
+        };
+        serviceConfig = {
+          Type = "oneshot";
+          DynamicUser = true;
+          LoadCredential = "apikey:${cfg.dispatcharr.epgSync.apiKeyFile}";
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          PrivateTmp = true;
+          ExecStart = "${pkgs.nodejs}/bin/node ${dispatcharrEpgSyncSrc}/src/sync.js";
+        };
+      };
+
+      systemd.timers.dispatcharr-epg-sync = lib.mkIf (cfg.dispatcharr.epgSync.enable && cfg.dispatcharr.epgSync.apiKeyFile != null) {
+        description = "Periodic Dispatcharr EPG reconciliation";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "10m";
+          OnUnitActiveSec = "${toString cfg.dispatcharr.epgSync.intervalMinutes}m";
           Persistent = true;
         };
       };

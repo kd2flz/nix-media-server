@@ -28,17 +28,25 @@ for host in $hosts; do
       nvidia = ms.gpu == "nvidia";
       epg = ms.liveSportsEpg.enable && ms.liveSportsEpg.listenPort > 0;
       disp = ms.dispatcharr.enable;
+      grab = ms.dispatcharr.epgGrabber.enable && ms.dispatcharr.epgGrabber.port > 0;
+      sync = ms.dispatcharr.epgSync.enable;
       deadman = mon.enableDeadManSwitch && mon.deadManURL != "";
       jobs = builtins.toJSON (map (s: s.job_name) c.services.prometheus.scrapeConfigs);
       rules = builtins.toJSON c.services.grafana.provision.alerting.rules.settings;
       svc = c.systemd.services;
       tim = c.systemd.timers;
+      containers = c.virtualisation.oci-containers.containers;
       row = name: want: got: "${name}\t${b want}\t${b got}\n";
     in
       row "dispatcharr probe"        disp    (has jobs "\"dispatcharr\"")
       + row "dispatcharr alert"      disp    (has rules "\"uid\":\"dispatcharr-down\"")
       + row "live-sports-epg probe"  epg     (has jobs "\"live-sports-epg\"")
       + row "live-sports-epg alert"  epg     (has rules "\"uid\":\"live-sports-epg-down\"")
+      + row "epg grabber container"  grab    (containers ? "iptv-org-epg")
+      + row "epg grabber probe"      grab    (has jobs "\"iptv-org-epg\"")
+      + row "epg grabber alert"      grab    (has rules "\"uid\":\"iptv-org-epg-down\"")
+      + row "epg sync service"       sync    (svc ? "dispatcharr-epg-sync")
+      + row "epg sync timer"         sync    (tim ? "dispatcharr-epg-sync")
       + row "nvidia check service"   nvidia  (svc ? "nvidia-driver-check")
       + row "nvidia check timer"     nvidia  (tim ? "nvidia-driver-check")
       + row "nvidia alert"           nvidia  (has rules "\"uid\":\"nvidia-driver-mismatch\"")
