@@ -17,7 +17,7 @@ nix eval --file . nixosConfigurations.T29769.config.system.build.toplevel.outPat
 
 ### Run all tests
 ```bash
-./tests/run-all.sh                # flake check + Node tests + tests/*.sh (same as CI)
+./tests/run-all.sh                # flake check + Node pkg tests + tests/*.sh (same as CI)
 scripts/change-impact.sh origin/main HEAD   # reboot/restart impact; exit 2 = reboot-class change
 ```
 Every change needs its own test; see "Testing requirements" below. **Never hardcode hostnames in tests.**
@@ -283,6 +283,10 @@ When `emby.enable = true` and `emby.apiKeyFile` is set, a Python exporter runs a
 
 A Grafana dashboard **"Emby Sessions"** is auto-provisioned with panels for sessions, transcoding, HW codec stats, and a session table.
 
+### Dispatcharr EPG (grabber + reconciler)
+
+`packages/iptv-org-epg/channels.xml` is a curated channel list mounted into a pinned `ghcr.io/iptv-org/epg` OCI container (`services.mediaServer.dispatcharr.epgGrabber.*`, `podman-iptv-org-epg`) that serves `guide.xml` on loopback for Dispatcharr to import as a declarative XMLTV source. `packages/dispatcharr-epg-sync/` (`dispatcharr.epgSync.*`, `dispatcharr-epg-sync.service/timer`) is a pure-ESM Node reconciler that ensures the local grabber source is registered in Dispatcharr and corrects only known-bad `epg_data_id` mappings from `data/channel-map.json` (idempotent; never overwrites correct mappings). Profile-scoping and RSN/dummy fallbacks are out of scope. **Privacy:** never commit upstream provider identity (names, account URLs, Dispatcharr account names) — refer to “the upstream provider”.
+
 ### live-sports-epg (dynamic sports XMLTV generator)
 
 `packages/live-sports-epg/` is a standalone Node.js package (pure ESM, no npm dependencies) that turns a dynamic live-sports M3U playlist into XMLTV EPG data for Dispatcharr. It periodically downloads the configured M3U, filters to `Live-Games` entries, matches each stream (e.g. `"Reds @ Cubs-A"`) against ESPN's free public scoreboard API using a curated team-alias table plus fuzzy matching, and writes a valid XMLTV file — served on an HTTP port and/or to disk. Matched-but-not-yet-started games get an "Upcoming:" placeholder programme filling the gap to kickoff so the guide grid never shows a blank slot. It also now emits appropriate team logos (home team for home feed, away team for away feed) for each channel and programme, and appends the broadcast feed type (e.g. `(Away Broadcast)`) to programme titles. See `packages/live-sports-epg/README.md` for the full design and `node --test packages/live-sports-epg/test/*.test.js` to run its unit/integration tests. The real systemd wiring is covered by the offline NixOS VM check `checks.<system>.live-sports-epg-e2e` (`nix build .#checks.x86_64-linux.live-sports-epg-e2e`), which serves a fixture M3U + stubbed ESPN API on loopback via the `ESPN_BASE_URL` override.
@@ -466,7 +470,7 @@ Push to the appropriate branch (`main` for production, `dev` for T29769 sandbox)
 
 ## Testing requirements
 
-Run everything with `./tests/run-all.sh` (CI runs the same script). It runs `nix flake check`, the live-sports-epg Node tests, and every `tests/*.sh` harness. **Every change must ship with the test that would have caught the failure it guards against**, in the same PR.
+Run everything with `./tests/run-all.sh` (CI runs the same script). It runs `nix flake check`, Node package tests (live-sports-epg, dispatcharr-epg-sync), and every `tests/*.sh` harness. **Every change must ship with the test that would have caught the failure it guards against**, in the same PR.
 
 | If you add or change... | You must also... |
 |---|---|
@@ -515,7 +519,7 @@ When the agent proposes a code change:
 
 `.github/workflows/pr-checks.yml` runs on every PR:
 
-- `tests`: `nix flake check`, the live-sports-epg Node tests, and `tests/*.sh`.
+- `tests`: `nix flake check`, Node package tests, and `tests/*.sh`.
 - `deploy-impact`: runs `scripts/change-impact.sh <base> <head>`, which evals every host at the head revision and the PR's merge base (no builds) and posts a PR comment listing, per host, whether kernel/initrd/kernel-modules/NVIDIA userspace changed (**reboot required**), which systemd units will restart, and whether `.sops.yaml`/`secrets/` changed. If any host needs a reboot the check **fails** until the PR carries the `approved-for-downtime` label; add it only when a maintenance window is agreed. Service restarts and secrets changes are warnings only.
 
 To make this a hard gate, require both checks in the `main` branch-protection rules. Run the report locally with `scripts/change-impact.sh origin/main HEAD` (exit 2 = reboot-class change).

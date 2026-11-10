@@ -12,9 +12,13 @@ step() { printf '\n==> %s\n' "$*"; }
 step 'nix flake check (evaluates every host)'
 nix flake check
 
-step 'live-sports-epg unit tests'
 if command -v node >/dev/null 2>&1; then node_cmd=(node); else node_cmd=(nix shell nixpkgs#nodejs -c node); fi
+
+step 'live-sports-epg unit tests'
 (cd packages/live-sports-epg && "${node_cmd[@]}" --test test/*.test.js)
+
+step 'dispatcharr-epg-sync unit tests'
+(cd packages/dispatcharr-epg-sync && "${node_cmd[@]}" --test test/*.test.js)
 
 # Every executable tests/*.sh harness except this runner.
 for t in tests/*.sh; do

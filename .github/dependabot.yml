@@ -1,0 +1,20 @@
+# Dependabot updates.
+# - nix: monitors flake.lock inputs (native Nix flake support). See
+#   https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories
+# - github-actions: keeps workflow actions current.
+# OCI image refs pinned in *.nix (ghcr.io/...@sha256:) are handled by Renovate
+# (renovate.json) via a regex manager, because Dependabot's docker ecosystem
+# only scans Dockerfiles/compose manifests, not Nix expressions.
+version: 2
+updates:
+  - package-ecosystem: "nix"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

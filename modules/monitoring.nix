@@ -182,6 +182,18 @@ in
             { target_label = "__address__"; replacement = "127.0.0.1:9115"; }
           ];
         }
+      ] ++ lib.optionals ((mediaCfg.dispatcharr.epgGrabber.enable or false) && ((mediaCfg.dispatcharr.epgGrabber.port or 0) > 0)) [
+        {
+          job_name = "iptv-org-epg";
+          metrics_path = "/probe";
+          params = { module = [ "http_2xx" ]; };
+          static_configs = [ { targets = [ "http://127.0.0.1:${toString mediaCfg.dispatcharr.epgGrabber.port}/guide.xml" ]; } ];
+          relabel_configs = [
+            { source_labels = [ "__address__" ]; target_label = "__param_target"; }
+            { source_labels = [ "__param_target" ]; target_label = "instance"; }
+            { target_label = "__address__"; replacement = "127.0.0.1:9115"; }
+          ];
+        }
       ] ++ lib.optionals (config.services.speechToText.enable or false) [
         {
           job_name = "speech-to-text";
@@ -759,6 +771,35 @@ in
                 annotations = {
                   summary = "Live sports EPG is down";
                   description = "live-sports-epg has been unavailable for 2 minutes";
+                };
+                labels = { severity = "warning"; };
+              }
+            ] ++ lib.optionals ((mediaCfg.dispatcharr.epgGrabber.enable or false) && ((mediaCfg.dispatcharr.epgGrabber.port or 0) > 0)) [
+              {
+                uid = "iptv-org-epg-down";
+                title = "iptv-org EPG Grabber Down";
+                condition = "A";
+                data = [{
+                  refId = "A";
+                  relativeTimeRange = { from = 120; to = 0; };
+                  datasourceUid = "PBFA97CFB590B2093";
+                  model = {
+                    datasource = { type = "prometheus"; uid = "PBFA97CFB590B2093"; };
+                    expr = "probe_success{job=\"iptv-org-epg\"} == 0";
+                    instant = true;
+                    interval = null;
+                    intervalMs = 15000;
+                    maxDataPoints = 43200;
+                    range = false;
+                    refId = "A";
+                  };
+                }];
+                noDataState = "NoData";
+                execErrState = "Alerting";
+                for = "5m";
+                annotations = {
+                  summary = "iptv-org EPG grabber is down";
+                  description = "The local XMLTV grabber (guide.xml) has been unavailable for 5 minutes";
                 };
                 labels = { severity = "warning"; };
               }
