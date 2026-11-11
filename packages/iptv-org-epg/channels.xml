@@ -8,27 +8,27 @@
 -->
 <channels>
   <!-- Local affiliates (tvpassport, verified IDs) -->
-  <channel site="tvpassport.com" lang="en" xmltv_id="WHIOTV7.us" site_id="whio-cbs-7-dayton-oh/1856">CBS 7 Dayton</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WKEF2.us" site_id="fox-wkef2-dayton-oh/14953">FOX 45 Dayton</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="KWTV9.us" site_id="kwtv-cbs-9-oklahoma-city-ok/1104">CBS 9 Oklahoma City</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="KOKH25.us" site_id="kokh-fox-25-oklahoma-city-ok/1442">FOX 25 Oklahoma City</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="KAUT43.us" site_id="kaut-cw-43-oklahoma-city-ok/1443">CW 34 Oklahoma City</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="KFOR4.us" site_id="kfor-nbc-4-oklahoma-city-ok/1103">NBC 4 Oklahoma City</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WJBK2.us" site_id="wjbk-fox-2-detroit-mi/176">FOX 2 Detroit</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WVUE8.us" site_id="wvue-fox-8-new-orleans-la/1041">FOX 8 New Orleans</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WXIN59.us" site_id="wxin-fox-59-indianapolis-in/1653">FOX 59 Indianapolis</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WPVI6.us" site_id="wpvi-abc-6-philadelphia-pa/179">ABC 6 Philadelphia</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WKEF22.us" site_id="wkef-abc-22-dayton-oh/1857">ABC 22 Dayton</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WRTV6.us" site_id="wrtv-abc-6-indianapolis-in/1651">ABC 6 Indianapolis</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WXYZ7.us" site_id="wxyz-abc-7-detroit-mi/177">ABC 7 Detroit</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WGNO26.us" site_id="wgno-abc-26-new-orleans-la/1043">ABC 26 New Orleans</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="KOCO5.us" site_id="koco-abc-5-oklahoma-city-ok/1105">ABC 5 Oklahoma City</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="KSWB5.us" site_id="kswb-fox-5-san-diego-ca/104">FOX 5 San Diego</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="KABC7.us" site_id="kabc-abc-7-los-angeles-ca/114">ABC 7 Los Angeles</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="KSHB41.us" site_id="kshb-nbc-41-kansas-city-mo/1054">NBC 41 Kansas City</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WDTN2.us" site_id="wdtn-nbc-2-dayton-oh/1855">NBC 2 Dayton</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="WWL4.us" site_id="wwl-cbs-4-new-orleans-la/1040">CBS 4 New Orleans</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="KMBC9.us" site_id="kmbc-abc-9-kansas-city-mo/1053">ABC 9 Kansas City</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WHIOTV71.us" site_id="cbs-whio-dayton-oh/1557">CBS 7 Dayton</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WRGTLDT1.us" site_id="fox-wkef2-dayton-oh/14953">FOX 45 Dayton</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KWTV9.us" site_id="cbs-kwtv-oklahoma-city-ok/1501">CBS 9 Oklahoma City</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KOKH25.us" site_id="fox-kokh-oklahoma-city-ok/1500">FOX 25 Oklahoma City</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KAUT43.us" site_id="cw-kaut-oklahoma-city-ok/3169">CW 34 Oklahoma City</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KFOR4.us" site_id="nbc-kfor-oklahoma-city-ok/1502">NBC 4 Oklahoma City</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WJBK21.us" site_id="fox-wjbk-detroit-mi/54">FOX 2 Detroit</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WVUE8.us" site_id="fox-wvue-new-orleans-la/1852">FOX 8 New Orleans</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WXIN59.us" site_id="fox-wxin-indianapolis-in/1699">FOX 59 Indianapolis</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WPVI6.us" site_id="abc-wpvi-philadelphia-pa/451">ABC 6 Philadelphia</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WKEF22.us" site_id="abc-wkef-dayton-oh/1559">ABC 22 Dayton</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WRTV61.us" site_id="abc-wrtv-indianapolis-in/1363">ABC 6 Indianapolis</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WXYZ7.us" site_id="abc-wxyz-detroit-mi/113">ABC 7 Detroit</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WGNO26.us" site_id="abc-wgno-new-orleans-la/2622">ABC 26 New Orleans</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KOCO5.us" site_id="abc-koco-oklahoma-city-ok/1503">ABC 5 Oklahoma City</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KSWB5.us" site_id="fox-kswb-san-diego-ca/957">FOX 5 San Diego</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KABC7.us" site_id="abc-kabc-los-angeles-ca/90">ABC 7 Los Angeles</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KSHB41.us" site_id="nbc-kshb-kansas-city-mo/1665">NBC 41 Kansas City</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WDTN431.us" site_id="nbc-wdtn-dayton-oh/2986">NBC 2 Dayton</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="WWL4.us" site_id="cbs-wwl-new-orleans-la/1851">CBS 4 New Orleans</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KMBC9.us" site_id="abc-kmbc-kansas-city-mo/1664">ABC 9 Kansas City</channel>
 
   <!-- Cable / RSNs present on tvpassport -->
   <channel site="tvpassport.com" lang="en" xmltv_id="ACCNetwork.us" site_id="acc-network/37789">ACC Network</channel>

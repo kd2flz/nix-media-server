@@ -154,8 +154,8 @@ in
 
     dispatcharr.epgGrabber.port = lib.mkOption {
       type = lib.types.port;
-      default = 3000;
-      description = "Loopback port the grabber serves guide.xml on.";
+      default = 8099;
+      description = "Loopback port the grabber serves guide.xml on (must not conflict with Grafana/other services).";
     };
 
     dispatcharr.epgGrabber.cronSchedule = lib.mkOption {
