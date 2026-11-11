@@ -57,20 +57,36 @@ async function loadAll(base, key, path) {
   return results;
 }
 
+async function refreshSource(base, key, source) {
+  if (!source?.id) return;
+  for (const path of [`/api/epg/sources/${source.id}/refresh/`, `/api/epg/import/`]) {
+    try {
+      await apiFetch(base, key, path, { method: 'POST', body: JSON.stringify(path.includes('import') ? { id: source.id } : {}) });
+      console.log(`dispatcharr-epg-sync: triggered EPG refresh via ${path}`);
+      return;
+    } catch (e) {
+      // best-effort: endpoint varies by Dispatcharr version
+    }
+  }
+  console.warn(`dispatcharr-epg-sync: could not trigger refresh for source ${source.name || source.id}`);
+}
+
 async function ensureSource(base, key, name, url) {
-  if (!name || !url) return;
+  if (!name || !url) return null;
   const sources = await loadAll(base, key, '/api/epg/sources/');
   const existing = sources.find((s) => s && s.name === name);
   const payload = { name, source_type: 'xmltv', url, is_active: true };
   if (existing) {
-    if (existing.url !== url || existing.source_type !== 'xmltv') {
-      await apiFetch(base, key, `/api/epg/sources/${existing.id}/`, { method: 'PATCH', body: JSON.stringify(payload) });
+    if (existing.url !== url || existing.source_type !== 'xmltv' || existing.is_active === false) {
+      const updated = await apiFetch(base, key, `/api/epg/sources/${existing.id}/`, { method: 'PATCH', body: JSON.stringify(payload) });
       console.log(`dispatcharr-epg-sync: updated EPG source ${name}`);
+      return updated || { ...existing, ...payload };
     }
-    return;
+    return existing;
   }
-  await apiFetch(base, key, '/api/epg/sources/', { method: 'POST', body: JSON.stringify(payload) });
+  const created = await apiFetch(base, key, '/api/epg/sources/', { method: 'POST', body: JSON.stringify(payload) });
   console.log(`dispatcharr-epg-sync: created EPG source ${name}`);
+  return created;
 }
 
 async function main() {
@@ -84,7 +100,8 @@ async function main() {
   const key = (await fs.readFile(keyFile, 'utf8')).trim();
   const map = JSON.parse(await fs.readFile(mapFile, 'utf8'));
 
-  await ensureSource(base, key, sourceName, sourceUrl);
+  const source = await ensureSource(base, key, sourceName, sourceUrl);
+  await refreshSource(base, key, source);
 
   const [channels, epgData] = await Promise.all([
     loadAll(base, key, '/api/channels/channels/'),
