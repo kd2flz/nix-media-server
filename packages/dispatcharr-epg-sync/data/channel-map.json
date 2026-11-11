@@ -2,7 +2,8 @@
   "fixes": [
     { "channelName": "NESN 2", "xmltvId": "NESN.us", "reason": "mis-mapped to ESPN 2 by heuristic auto-match" },
     { "channelName": "NBC Sports Philadelphia", "xmltvId": "NBCSPhiladelphia.us", "reason": "mis-mapped to NBC 10 Philadelphia" },
-    { "channelName": "NBC Sports California", "xmltvId": "NBCSCalifornia.us", "reason": "mis-mapped to NBC South Florida" }
+    { "channelName": "NBC Sports California", "xmltvId": "NBCSCalifornia.us", "reason": "mis-mapped to NBC South Florida" },
+    { "channelName": "Marquee Network", "xmltvId": "MarqueeSportsNetwork.us", "reason": "mis-mapped to MGM+ Marquee (epg.pw)" }
   ],
   "notes": "Declarative corrections for bad epg_data_id mappings. The reconciler matches channels by exact name, resolves xmltvId to epg_data, and PATCHes only mismatches. Duplicate epg_data_id collisions are reported, not overwritten."
 }
