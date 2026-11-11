@@ -32,6 +32,12 @@ console.log(`channels.xml: ${ch.length} channels ok`);
 # Reconciler must trigger an EPG source refresh after registering/updating it.
 grep -q 'refreshSource' "$repo/packages/dispatcharr-epg-sync/src/sync.js"
 
+# CRLF in Nix-embedded shell/scripts breaks systemd preStart/ExecStart at runtime.
+if grep -lP '\r' "$repo/modules/media-server.nix" "$repo/tests/dispatcharr-epg-sync-check.sh" "$repo/packages/dispatcharr-epg-sync/src/sync.js" >/dev/null 2>&1; then
+  echo "FAIL: CRLF found in EPG/grabber wiring files" >&2
+  exit 1
+fi
+
 # Grabber must not bind to Grafana's port (3000) on any host where enabled.
 nix eval --raw "$repo#nixosConfigurations" --apply '
   x: let
