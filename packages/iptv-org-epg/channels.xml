@@ -53,6 +53,7 @@
   <channel site="tvpassport.com" lang="en" xmltv_id="CBCNorth.ca" site_id="cbc-north-nwt/348">CBC North</channel>
   <channel site="tvpassport.com" lang="en" xmltv_id="YesNetwork.us" site_id="yes-network/1953">YES Network</channel>
   <channel site="tvpassport.com" lang="en" xmltv_id="SportsNetNewYork.us" site_id="sny-sportsnet-new-york-hd/4713">SNY</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="MarqueeSportsNetwork.us" site_id="marquee-sports-network/34880">Marquee Sports Network</channel>
 
   <!--
     Not present (or no verified tvpassport.com EPG listing) for requested additions:
