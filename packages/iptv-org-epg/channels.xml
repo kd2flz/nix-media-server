@@ -31,15 +31,34 @@
   <channel site="tvpassport.com" lang="en" xmltv_id="KMBC9.us" site_id="abc-kmbc-kansas-city-mo/1664">ABC 9 Kansas City</channel>
 
   <!-- Cable / RSNs present on tvpassport -->
-  <channel site="tvpassport.com" lang="en" xmltv_id="ACCNetwork.us" site_id="acc-network/37789">ACC Network</channel>
-  <channel site="tvpassport.com" lang="en" xmltv_id="BigTenNetwork.us" site_id="big-ten-network/13813">BTN Network</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="ACCNetwork.us" site_id="acc-network/33964">ACC Network</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="BigTenNetwork.us" site_id="big-ten-network/4499">Big Ten Network</channel>
+
+  <!-- Requested additions (tvpassport, verified where available) -->
+  <channel site="tvpassport.com" lang="en" xmltv_id="CNN.us" site_id="cnn/70">CNN</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="ESPN.us" site_id="espn/594">ESPN</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="ESPN2.us" site_id="espn2/650">ESPN2</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="ESPNU.us" site_id="espn-u/3331">ESPNU</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="ESPNews.us" site_id="espn-news/1527">ESPN News</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="AnimalPlanet.us@East" site_id="animal-planet-us--east/645">Animal Planet East</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="AnimalPlanet.us@West" site_id="animal-planet-us--west/3549">Animal Planet West</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="KCOPTV51.us" site_id="mnt-kcop-los-angeles-ca/1811">FOX 13 Los Angeles (KCOP)</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="TBS.us@East" site_id="tbs--east/61">TBS East</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="TBS.us@West" site_id="tbs--pacific/2016">TBS West</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="DiscoveryScience.ca" site_id="discovery-science-canada/1188">Discovery Science</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="AEEast.us" site_id="ae-us--eastern-feed/2">A&amp;E East</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="truTV.us@East" site_id="trutv-usa--eastern/333">truTV East</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="truTV.us@West" site_id="trutv-usa--pacific/1263">truTV West</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="CBCNewsNetwork.ca" site_id="cbc-news-network/74">CBC News Network</channel>
+  <channel site="tvpassport.com" lang="en" xmltv_id="CBCNorth.ca" site_id="cbc-north-nwt/348">CBC North</channel>
   <channel site="tvpassport.com" lang="en" xmltv_id="YesNetwork.us" site_id="yes-network/1953">YES Network</channel>
   <channel site="tvpassport.com" lang="en" xmltv_id="SportsNetNewYork.us" site_id="sny-sportsnet-new-york-hd/4713">SNY</channel>
 
   <!--
-    Not present (or no verified xmltv_id) on tvpassport (out of scope; RSN/dummy
-    fallbacks deferred): MASN, MASN2, NESN, Spectrum SportsNet Lakers, PAC 12
-    Insider, Flo Hockey, Red Zone Backup, beIN USA, TG 4, CBC News North, North Platte.
-    YES/SNY added via tvpassport (YES has native xmltv_id; SNY assigned).
+    Not present (or no verified tvpassport.com EPG listing) for requested additions:
+    ITV, beIN Sports Xtra (national), beIN USA, MASN, MASN2, NESN. "FOX 13 Los
+    Angeles" mapped to KCOP-TV (KCOPTV51.us, tvpassport lists as MNT/KCOP).
+    CBC News North (Canada) not listed; CBC North (NWT) added instead.
+    Existing out-of-scope notes retained for others (e.g. Spectrum SportsNet Lakers).
   -->
 </channels>
