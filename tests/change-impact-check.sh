@@ -50,7 +50,7 @@ case "$args" in
       path=/nix/store/unchanged-caddy
     fi
     printf 'unit\tcaddy.service\t%s\n' "$path"
-    printf 'unit\tpodman-open-webui.service\t%s\n' "$path"
+    printf 'unit\tjellyfin.service\t%s\n' "$path"
     ;;
   *) printf 'HOST' ;;
 esac

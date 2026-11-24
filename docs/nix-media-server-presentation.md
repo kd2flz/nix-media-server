@@ -105,8 +105,6 @@ modules/
   common.nix       # SSH, admin user, Podman, GC, auto-reboot, time servers
   media-server.nix # services.mediaServer.* — the big option tree
   monitoring.nix   # Prometheus, Grafana, exporters, alert rules
-  ollama.nix       # optional local LLM inference
-  speech-to-text.nix # optional transcription API (whisper.cpp)
 hosts/<host>/
   default.nix      # site-specific toggles only (tiny)
   hardware.nix     # disks, filesystems, bootloader
@@ -290,8 +288,6 @@ all hosts point at the same SMA today, but we don't want to be locked into that.
 | **Wizarr** | Invites / onboarding | :5690 |
 | **Dispatcharr** | IPTV stream manager | Podman · :9191 |
 | **live-sports-epg** | Sports XMLTV generator | Node systemd · :8098 |
-| **Ollama** | Local LLM inference | native · :11434 |
-| **Speech-to-Text** | Transcription API (audio/video → text) | native · :8080 |
 
 `jellyfin.enable` and `emby.enable` are **mutually exclusive** (enforced by an assertion).
 
@@ -306,13 +302,12 @@ driver and matched CUDA capabilities.
 
 ---
 
-## Dispatcharr, EPG & the AI control plane
+## Dispatcharr, EPG & reconciliation
 
 - **Dispatcharr** manages IPTV sources, channels, EPG, and VOD — containerized
 - **EPG auto-match** timer keeps new channels mapped (default: every 15 min)
 - **live-sports-epg** reads *Dispatcharr's own* M3U, matches games against ESPN's free API
   (team aliases + fuzzy matching), and emits XMLTV with logos and "Upcoming:" placeholders
-- **Dispatcharr MCP** (:8000): an AI agent control plane, API key from sops
 
 > Lesson learned: never let two clients poll one IPTV provider concurrently —
 > throttled/truncated responses can wipe channel groups.
@@ -321,25 +316,6 @@ driver and matched CUDA capabilities.
 [5:15] The newest, most custom part. The M3U source must be Dispatcharr's export, not
 the provider directly — concurrent polls corrupted the channel list once, so we removed
 the second poller.
--->
-
----
-
-## Speech-to-text, on demand
-
-- **whisper.cpp** HTTP server — audio/video in, text out. `POST /inference`, `GET /health`
-- **Nothing is scanned.** The API transcribes only what you send it — the media library is never crawled
-- **Model = a Nix store path.** `ggml-small.en.bin`, hash-verified at build time, fetched into the store
-- **Exposed through Caddy** at `speech.<domainBase>`, or kept private on loopback (`expose = "private"`)
-- **Basic auth from sops** — `basicAuth.hashFile` renders the bcrypt hash into a `/run` env file, never the Nix store
-- **Hardened unit**: loopback bind, `ProtectSystem=strict`, no capabilities, private `/tmp`
-
-> CPU-only: `small.en` runs ~1–3x realtime. GPU whisper would need a CUDA rebuild — out of scope.
-
-<!--
-[5:35] Deliberately pull-based. The tempting version of this feature is a nightly job
-that transcribes everything in the library; that is a different product with different
-cost, storage, and privacy characteristics. Here the module only provides the API.
 -->
 
 ---

@@ -52,6 +52,12 @@ for host in $hosts; do
       + row "nvidia alert"           nvidia  (has rules "\"uid\":\"nvidia-driver-mismatch\"")
       + row "deadman-ping service"   deadman (svc ? "deadman-ping")
       + row "deadman-ping timer"     deadman (tim ? "deadman-ping")
+      + row "speech probe removed"   false   (has jobs "\"speech-to-text\"")
+      + row "speech alert removed"   false   (has rules "\"uid\":\"speech-to-text-down\"")
+      + row "speech service removed" false   (svc ? "speech-to-text")
+      + row "speech auth env removed" false  (svc ? "speech-to-text-auth-env")
+      + row "ollama service removed" false   (svc ? "ollama")
+      + row "open-webui removed"     false   (containers ? "open-webui")
   ' 2>/dev/null)"
 
   while IFS=$'\t' read -r name want got; do
