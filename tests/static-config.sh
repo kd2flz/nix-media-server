@@ -30,10 +30,13 @@ for host in $hosts; do
       epg = ms.liveSportsEpg.enable && ms.liveSportsEpg.listenPort > 0;
       disp = ms.dispatcharr.enable;
       grab = ms.dispatcharr.epgGrabber.enable && ms.dispatcharr.epgGrabber.port > 0;
-      sync = ms.dispatcharr.epgSync.enable;
-      deadman = mon.enableDeadManSwitch && mon.deadManURLFile != null;
-      jobs = builtins.toJSON (map (s: s.job_name) c.services.prometheus.scrapeConfigs);
-      rules = builtins.toJSON c.services.grafana.provision.alerting.rules.settings;
+       sync = ms.dispatcharr.epgSync.enable;
+       deadman = mon.enableDeadManSwitch && mon.deadManURLFile != null;
+       embyExp = ms.emby.enable && ms.emby.apiKeyFile != null;
+       jobs = builtins.toJSON (map (s: s.job_name) c.services.prometheus.scrapeConfigs);
+
+       rules = builtins.toJSON c.services.grafana.provision.alerting.rules.settings;
+
       svc = c.systemd.services;
       tim = c.systemd.timers;
       containers = c.virtualisation.oci-containers.containers;
@@ -48,9 +51,14 @@ for host in $hosts; do
       + row "epg grabber container"  grab    (containers ? "iptv-org-epg")
       + row "epg grabber probe"      grab    (has jobs "\"iptv-org-epg\"")
       + row "epg grabber alert"      grab    (has rules "\"uid\":\"iptv-org-epg-down\"")
-      + row "epg sync service"       sync    (svc ? "dispatcharr-epg-sync")
-      + row "epg sync timer"         sync    (tim ? "dispatcharr-epg-sync")
-      + row "nvidia check service"   nvidia  (svc ? "nvidia-driver-check")
+       + row "epg sync service"       sync    (svc ? "dispatcharr-epg-sync")
+       + row "epg sync timer"         sync    (tim ? "dispatcharr-epg-sync")
+       + row "live-sports loopback"   epg     (svc ? "live-sports-epg" && svc."live-sports-epg".environment.LISTEN_HOST == "127.0.0.1")
+       + row "jellyfin metrics fix"   ms.jellyfin.enable (has (svc.jellyfin.preStart or "") "<EnableMetrics>true</EnableMetrics>")
+       + row "emby exporter service"  embyExp (svc ? "emby-exporter")
+       + row "nvidia check service"   nvidia  (svc ? "nvidia-driver-check")
+
+
       + row "nvidia check timer"     nvidia  (tim ? "nvidia-driver-check")
       + row "nvidia alert"           nvidia  (has rules "\"uid\":\"nvidia-driver-mismatch\"")
       + row "deadman-ping service"   deadman (svc ? "deadman-ping")

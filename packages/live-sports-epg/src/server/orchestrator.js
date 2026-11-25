@@ -142,16 +142,11 @@ export class EpgService {
     // matcher resolves canonical names; the extra work is bounded by
     // lookAheadDays * sports * ~10 events/sport/day).
     const matches = new Map();
-    const sportByName = {};
     for (const entry of liveEntries) {
       const m = matchStream(entry.tvgId, events, { now: new Date() });
       if (m.matched && m.confidence >= 0.5) {
         matches.set(entry.tvgId, { entry, match: m, sport: m.event.sport?.key });
         stats.matched++;
-        // Best-effort league hint: pick the sport whose events have the
-        // most name overlap with this match. ESPN groups by league so this
-        // narrows the duration fallback.
-        if (m.event.league) sportByName[entry.tvgId] = m.event.league;
       } else {
         stats.unmatched++;
         log.debug('Unmatched stream', {
@@ -164,7 +159,6 @@ export class EpgService {
 
     const xmltv = renderXmltv(liveEntries, matches, {
       defaultDurations: DEFAULT_DURATIONS_MINUTES,
-      sportByName,
       upcoming: this.cfg.upcoming,
       upcomingMaxHours: this.cfg.upcomingMaxHours,
     });

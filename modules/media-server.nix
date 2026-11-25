@@ -9,13 +9,12 @@ let
   liveSportsEpgSrc = ../packages/live-sports-epg;
   dispatcharrEpgSyncSrc = ../packages/dispatcharr-epg-sync;
 
-  # Render a Caddy vhost with optional internal TLS (no global block required)
-  vhost = host: upstream: ''
-    ${host} {
-      ${lib.optionalString (cfg.tlsMode == "internal") "tls internal"}
-      reverse_proxy ${upstream}
-    }
-  '';
+  tlsLine =
+    if cfg.tls.certFile != null && cfg.tls.keyFile != null
+    then "tls ${cfg.tls.certFile} ${cfg.tls.keyFile}"
+    else if cfg.tlsMode == "internal"
+    then "tls internal"
+    else "";
 
   topLevelHostname = builtins.elemAt (lib.strings.splitString "." cfg.domainBase) 0;
 in
@@ -213,6 +212,12 @@ in
         with most IPTV providers); required when liveSportsEpg.enable = true.
       '';
       example = lib.literalExpression "config.sops.secrets.live_sports_m3u_url.path";
+    };
+
+    liveSportsEpg.listenHost = lib.mkOption {
+      type = lib.types.str;
+      default = "127.0.0.1";
+      description = "Address the live-sports-epg HTTP server binds to (loopback by default).";
     };
 
     liveSportsEpg.listenPort = lib.mkOption {
@@ -444,13 +449,17 @@ in
       })
     ];
 
-    # Enable Jellyfin's Prometheus metrics endpoint by flipping <EnableMetrics> in system.xml.
-    # On first start the file doesn't exist yet, so guard with -f; metrics get enabled on the
-    # next restart after Jellyfin generates its config.
+    # Enable Jellyfin's Prometheus metrics endpoint in system.xml. Older configs
+    # have `<EnableMetrics>false</EnableMetrics>` to flip; fresh installs can omit
+    # the element entirely, so insert it before Jellyfin starts.
     systemd.services.jellyfin = lib.mkIf cfg.jellyfin.enable {
       preStart = ''
         if [ -f /var/lib/jellyfin/config/system.xml ]; then
-          ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
+          if ${pkgs.gnugrep}/bin/grep -q '<EnableMetrics>' /var/lib/jellyfin/config/system.xml; then
+            ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
+          else
+            ${pkgs.gnused}/bin/sed -i 's|</Server>|  <EnableMetrics>true</EnableMetrics>\n</Server>|' /var/lib/jellyfin/config/system.xml
+          fi
         fi
       '';
     };
@@ -522,104 +531,7 @@ in
       path = with pkgs; [ python3 ];
       serviceConfig = {
         LoadCredential = "apikey:${cfg.emby.apiKeyFile}";
-        ExecStart = "${pkgs.python3}/bin/python3 ${pkgs.writeText "emby-exporter.py" ''
-import json, os, sys, time, urllib.request
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from threading import Thread
-
-API_KEY_FILE = os.path.join(os.environ["CREDENTIALS_DIRECTORY"], "apikey")
-API_KEY = open(API_KEY_FILE).read().strip()
-EMBY_HOST, EMBY_PORT, LISTEN_PORT = "127.0.0.1", 8096, 8097
-POLL_INTERVAL = 15
-METRICS = {"sessions": 0, "playing": 0, "transcoding": 0, "hw_decode": 0, "hw_encode": 0, "details": []}
-
-def fetch():
-    url = f"http://{EMBY_HOST}:{EMBY_PORT}/emby/Sessions?api_key={API_KEY}"
-    try:
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        return json.loads(urllib.request.urlopen(req, timeout=10).read())
-    except Exception:
-        return None
-
-def poll():
-    s = fetch()
-    if s is None:
-        for k in ("sessions", "playing", "transcoding", "hw_decode", "hw_encode"):
-            METRICS[k] = 0
-        METRICS["details"] = []
-        return
-    METRICS["sessions"] = len(s)
-    playing = transcoding = hw_decode = hw_encode = 0
-    details = []
-    for sess in s:
-        u = sess.get("UserName", "?")
-        d = sess.get("DeviceName", "?")
-        c = sess.get("Client", "?")
-        di = sess.get("DeviceId", "?")
-        np = sess.get("NowPlayingItem")
-        is_p = 1 if np else 0
-        is_t = is_hwd = is_hwe = 0
-        if np:
-            playing += 1
-            ti = sess.get("TranscodingInfo")
-            if ti:
-                transcoding += 1
-                if ti.get("HardwareDecoding") and ti["HardwareDecoding"] != "None":
-                    hw_decode += 1; is_hwd = 1
-                if ti.get("IsVideoDirectEncode") is False:
-                    hw_encode += 1; is_hwe = 1
-        details.append({"user": u, "device": d, "client": c, "device_id": di, "playing": is_p, "transcoding": is_t, "hwd": is_hwd, "hwe": is_hwe})
-    METRICS.update({"playing": playing, "transcoding": transcoding, "hw_decode": hw_decode, "hw_encode": hw_encode, "details": details})
-
-def render():
-    m = METRICS
-    lines = [
-        "# HELP emby_sessions_total Active Emby sessions",
-        "# TYPE emby_sessions_total gauge",
-        f"emby_sessions_total {m['sessions']}",
-        "",
-        "# HELP emby_sessions_playing Sessions playing media",
-        "# TYPE emby_sessions_playing gauge",
-        f"emby_sessions_playing {m['playing']}",
-        "",
-        "# HELP emby_sessions_transcoding Sessions being transcoded",
-        "# TYPE emby_sessions_transcoding gauge",
-        f"emby_sessions_transcoding {m['transcoding']}",
-        "",
-        "# HELP emby_sessions_hw_decode Sessions using hardware decode",
-        "# TYPE emby_sessions_hw_decode gauge",
-        f"emby_sessions_hw_decode {m['hw_decode']}",
-        "",
-        "# HELP emby_sessions_hw_encode Sessions using hardware encode",
-        "# TYPE emby_sessions_hw_encode gauge",
-        f"emby_sessions_hw_encode {m['hw_encode']}",
-        "",
-    ]
-    for d in m["details"]:
-        lbl = f'user="{d["user"]}",device="{d["device"]}",client="{d["client"]}",device_id="{d["device_id"]}"'
-        lines.append(f'emby_session_info{{{lbl}}} 1')
-    lines.append("")
-    return "\n".join(lines)
-
-class H(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == "/metrics":
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(render().encode())
-        else:
-            self.send_response(404)
-            self.end_headers()
-    def log_message(self, *a): pass
-
-def poll_loop():
-    while True:
-        poll()
-        time.sleep(POLL_INTERVAL)
-Thread(target=poll_loop, daemon=True).start()
-HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
-''}";
+        ExecStart = "${pkgs.python3}/bin/python3 ${pkgs.writeText "emby-exporter.py" (builtins.readFile ../packages/emby-exporter/emby-exporter.py)}";
         Restart = "always";
         RestartSec = "5s";
         DynamicUser = true;
@@ -930,6 +842,7 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
         environment = {
           OUTPUT_PATH = "/var/lib/live-sports-epg/epg.xml";
           CACHE_DIR = "/var/cache/live-sports-epg";
+          LISTEN_HOST = cfg.liveSportsEpg.listenHost;
           LISTEN_PORT = toString cfg.liveSportsEpg.listenPort;
           REFRESH_MINUTES = toString cfg.liveSportsEpg.refreshMinutes;
           LOOK_AHEAD_DAYS = toString cfg.liveSportsEpg.lookAheadDays;
@@ -1032,12 +945,7 @@ services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
     ########################################
 
 
-services.caddy = let
-      tlsLine =
-        if cfg.tls.certFile != null && cfg.tls.keyFile != null
-        then "tls ${cfg.tls.certFile} ${cfg.tls.keyFile}"
-        else "tls internal";
-    in {
+    services.caddy = {
       enable = true;
       resume = false;
 

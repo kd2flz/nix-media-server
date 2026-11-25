@@ -14,6 +14,7 @@ import fs from 'node:fs';
  *   refreshMinutes: how often to refresh the M3U + schedule (default 5)
  *   lookAheadDays: how many days of events to fetch (default 7)
  *   sports: list of SPORTS keys to enable (default = all)
+ *   listenHost: address for the optional HTTP server (default 127.0.0.1)
  *   listenPort: HTTP port to serve the XMLTV on (default 0 = no server)
  *   timezone: only used for the file mtime; timestamps are UTC
  *   logLevel: debug|info|warn|error (default info)
@@ -29,6 +30,7 @@ const ENV = {
   REFRESH_MINUTES: 'REFRESH_MINUTES',
   LOOK_AHEAD_DAYS: 'LOOK_AHEAD_DAYS',
   SPORTS: 'SPORTS',
+  LISTEN_HOST: 'LISTEN_HOST',
   LISTEN_PORT: 'LISTEN_PORT',
   LOG_LEVEL: 'LOG_LEVEL',
   FETCH_TIMEOUT_MS: 'FETCH_TIMEOUT_MS',
@@ -75,6 +77,7 @@ export function loadConfig() {
     lookAheadDays: num(fromFile.lookAheadDays ?? process.env[ENV.LOOK_AHEAD_DAYS], 7),
     sports: fromFile.sports
       || (process.env[ENV.SPORTS] ? process.env[ENV.SPORTS].split(',').map((s) => s.trim()).filter(Boolean) : ALL_SPORTS),
+    listenHost: fromFile.listenHost || process.env[ENV.LISTEN_HOST] || '127.0.0.1',
     listenPort: num(fromFile.listenPort ?? process.env[ENV.LISTEN_PORT], 0),
     logLevel: (fromFile.logLevel || process.env[ENV.LOG_LEVEL] || 'info').toLowerCase(),
     fetchTimeoutMs: num(fromFile.fetchTimeoutMs ?? process.env[ENV.FETCH_TIMEOUT_MS], 10_000),
@@ -93,6 +96,9 @@ export function loadConfig() {
   }
   if (cfg.refreshMinutes < 1) {
     throw new Error('refreshMinutes must be >= 1');
+  }
+  if (cfg.listenPort < 0 || cfg.listenPort > 65535) {
+    throw new Error('listenPort must be between 0 and 65535');
   }
   return cfg;
 }

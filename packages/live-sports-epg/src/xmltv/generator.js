@@ -242,11 +242,11 @@ export function renderChannel(tvgId, tvgName, tvgLogo) {
  *
  * Inputs:
  *   entries   — array of { tvgId, tvgName, ... } from parseM3U
- *   matches   — Map<tvgId, { entry, match, sport }>
- *   opts.fallback — "now" (use current time as start) or "nextMidnight"
- *   opts.sportByName — map of lower-case tvgId → sport key (used for the
- *     per-sport default duration when the schedule event has no end time)
- *   opts.now — injectable clock (default `new Date()`) for tests
+  *   matches   — Map<tvgId, { entry, match, sport }>; `sport` is the canonical
+  *     sport key used for the per-sport default duration
+  *   opts.fallback — "now" (use current time as start) or "nextMidnight"
+  *   opts.now — injectable clock (default `new Date()`) for tests
+
  *   opts.upcoming — whether to emit a pre-game "Upcoming:" placeholder
  *     programme for matched events that haven't started yet (default true)
  *   opts.upcomingMaxHours — if set, caps how far before kickoff the
@@ -255,7 +255,6 @@ export function renderChannel(tvgId, tvgName, tvgLogo) {
  */
 export function renderXmltv(entries, matches, opts = {}) {
   const now = opts.now || new Date();
-  const sportByName = opts.sportByName || {};
   const upcomingEnabled = opts.upcoming !== false;
 
   const channelsXml = entries
@@ -282,7 +281,10 @@ export function renderXmltv(entries, matches, opts = {}) {
       }
       const start = new Date(m.match.event.startTime);
       if (Number.isNaN(start.valueOf())) return [];
-      const end = computeEnd(start, { ...m.match.event, sport: { key: sportByName[entry.tvgId] || m.sport } }, opts.defaultDurations);
+      const end = computeEnd(start, {
+        ...m.match.event,
+        sport: { key: m.sport || m.match.event.sport?.key },
+      }, opts.defaultDurations);
 
       const programmes = [];
       if (upcomingEnabled && start.getTime() > now.getTime()) {
