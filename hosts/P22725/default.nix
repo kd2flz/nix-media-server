@@ -46,9 +46,15 @@
     group = "root";
   };
 
+  sops.secrets.deadman_url_p22725 = {
+    mode = "0400";
+    owner = "root";
+    group = "root";
+  };
+
   services.monitoring.enable = true;
   services.monitoring.enableDeadManSwitch = true;
-  services.monitoring.deadManURL = "https://hc-ping.com/879c4712-d8ca-4f69-ad41-3e587d9dba65";
+  services.monitoring.deadManURLFile = config.sops.secrets.deadman_url_p22725.path;
 
   services.mediaServer = {
     enable = true;

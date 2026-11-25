@@ -248,7 +248,7 @@ a future host may be a different site/organization, so we don't share keys by de
 
 ```nix
 services.monitoring.enableDeadManSwitch = true;
-services.monitoring.deadManURL = "https://hc-ping.com/<uuid>";
+services.monitoring.deadManURLFile = config.sops.secrets.deadman_url_<host>.path;
 ```
 
 A timer pings Healthchecks.io every minute; if the pings stop, the *absence* alerts you.
@@ -327,7 +327,7 @@ networking.hostName = "P27691";              # must match directory
 sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 services.monitoring.enable = true;
 services.monitoring.enableDeadManSwitch = true;
-services.monitoring.deadManURL = "https://hc-ping.com/…";
+services.monitoring.deadManURLFile = config.sops.secrets.deadman_url_<host>.path;
 
 services.mediaServer = {
   enable = true;

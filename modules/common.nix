@@ -89,20 +89,14 @@
   users.users.admin = {
     isNormalUser = true;
     extraGroups = [ "wheel" "video" "media" ];
-    # NOTE: initialPassword is a first-boot placeholder only. Change it immediately
-    # with `passwd admin` after first login, or replace with hashedPasswordFile.
-    initialPassword = "pleasechangeme";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBvUDztxgvoUy+8Q4FoSflZ2ezd3dBhKqFOm8mGvBHW+"
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE0ARZVaze3Za4h3q12NKKB3f2fpIi4m4sEkh0wf5apy" # L36789-nix
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE0ARZVaze3Za4h3q12NKKB3f2fpIi4m4sEkh0wf5apy"
     ];
   };
 
   # LAN networking
   networking.networkmanager.enable = true;
-
-  # Internal time servers.
-  networking.timeServers = options.networking.timeServers.default ++ [ "192.168.2.19" "192.168.82.19" ];
 
   # Enable Podman
   virtualisation.containers.enable = true;

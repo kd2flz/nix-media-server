@@ -8,7 +8,6 @@
 
   services.monitoring.enable = true;
   services.monitoring.enableDeadManSwitch = true;
-  services.monitoring.deadManURL = "https://hc-ping.com/000e29a6-91e0-45e8-a05a-f1d0513decdb";
 
   networking.hostName = "P32338";       # per-host can override if desired
   time.timeZone = "Europe/London";
@@ -26,6 +25,14 @@
     group = "root";
     mode = "0400";
   };
+
+  sops.secrets.deadman_url_p32338 = {
+    owner = "root";
+    group = "root";
+    mode = "0400";
+  };
+
+  services.monitoring.deadManURLFile = config.sops.secrets.deadman_url_p32338.path;
 
   # KACE SMA host: per-host secret, not shared across hosts (see
   # services.mediaServer.kace.hostFile in modules/media-server.nix).

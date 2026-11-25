@@ -85,22 +85,6 @@ in
       description = "Enable Dispatcharr IPTV stream manager (container).";
     };
 
-    dispatcharrMcp.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Enable the Dispatcharr MCP server (AI agent control plane) on port 8000.";
-    };
-
-    dispatcharrMcp.apiKeyFile = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
-      description = ''
-        Path to a file containing the Dispatcharr API key for the MCP server.
-        Point this at config.sops.secrets.dispatcharr_mcp_api_key.path; the host
-        must declare that secret (see P27691/default.nix for the pattern).
-      '';
-    };
-
     dispatcharr.epgAutoMatch.enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -120,10 +104,9 @@ in
       default = null;
       description = ''
         Path to a file containing a Dispatcharr API key, sent as the X-API-Key
-        header. The same key used for dispatcharrMcp is fine -- point this at
-        config.sops.secrets.dispatcharr_mcp_api_key.path.
+        header. Point this at config.sops.secrets.dispatcharr_api_key.path.
       '';
-      example = lib.literalExpression "config.sops.secrets.dispatcharr_mcp_api_key.path";
+      example = lib.literalExpression "config.sops.secrets.dispatcharr_api_key.path";
     };
 
     dispatcharr.epgAutoMatch.intervalMinutes = lib.mkOption {
@@ -189,8 +172,8 @@ in
     dispatcharr.epgSync.apiKeyFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = "Dispatcharr API key file (X-API-Key). Reuse dispatcharr_mcp_api_key.";
-      example = lib.literalExpression "config.sops.secrets.dispatcharr_mcp_api_key.path";
+      description = "Dispatcharr API key file (X-API-Key). Reuse config.sops.secrets.dispatcharr_api_key.path.";
+      example = lib.literalExpression "config.sops.secrets.dispatcharr_api_key.path";
     };
 
     dispatcharr.epgSync.channelMapFile = lib.mkOption {
@@ -418,12 +401,8 @@ in
         message = "services.mediaServer.kace.enable = true requires kace.hostFile to be set (e.g. config.sops.secrets.kace_host_<host>.path). There is no default -- the SMA host can differ per site.";
       }
       {
-        assertion = !cfg.dispatcharrMcp.enable || cfg.dispatcharrMcp.apiKeyFile != null;
-        message = "services.mediaServer.dispatcharrMcp.enable = true requires dispatcharrMcp.apiKeyFile (config.sops.secrets.dispatcharr_mcp_api_key.path).";
-      }
-      {
         assertion = !cfg.dispatcharr.epgAutoMatch.enable || cfg.dispatcharr.epgAutoMatch.apiKeyFile != null;
-        message = "services.mediaServer.dispatcharr.epgAutoMatch.enable = true requires dispatcharr.epgAutoMatch.apiKeyFile (e.g. config.sops.secrets.dispatcharr_mcp_api_key.path).";
+        message = "services.mediaServer.dispatcharr.epgAutoMatch.enable = true requires dispatcharr.epgAutoMatch.apiKeyFile (e.g. config.sops.secrets.dispatcharr_api_key.path).";
       }
       {
         assertion = !cfg.liveSportsEpg.enable || cfg.liveSportsEpg.m3uUrlFile != null;
@@ -431,7 +410,7 @@ in
       }
       {
         assertion = !cfg.dispatcharr.epgSync.enable || cfg.dispatcharr.epgSync.apiKeyFile != null;
-        message = "services.mediaServer.dispatcharr.epgSync.enable = true requires dispatcharr.epgSync.apiKeyFile (reuse config.sops.secrets.dispatcharr_mcp_api_key.path).";
+        message = "services.mediaServer.dispatcharr.epgSync.enable = true requires dispatcharr.epgSync.apiKeyFile (reuse config.sops.secrets.dispatcharr_api_key.path).";
       }
       {
         assertion = !cfg.dispatcharr.epgGrabber.enable || cfg.dispatcharr.epgGrabber.port > 0;
@@ -899,44 +878,12 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
         };
       };
       ########################################
-      # Dispatcharr MCP server (optional)
+      # Dispatcharr API key
       ########################################
-      sops.secrets.dispatcharr_mcp_api_key = lib.mkIf cfg.dispatcharrMcp.enable {
+      sops.secrets.dispatcharr_api_key = lib.mkIf (cfg.dispatcharr.epgAutoMatch.enable || cfg.dispatcharr.epgSync.enable) {
         mode = "0400";
         owner = "root";
         group = "root";
-      };
-
-      # Render the API key into an env file read by the container at startup.
-      # The MCP image only accepts DISPATCHARR_API_KEY as a plain env var, so we
-      # derive it from the sops-decrypted secret instead of baking it into the store.
-      systemd.services.dispatcharr-mcp-env = lib.mkIf (cfg.dispatcharrMcp.enable && cfg.dispatcharrMcp.apiKeyFile != null) {
-        description = "Render Dispatcharr MCP env file from sops secret";
-        requiredBy = [ "podman-dispatcharr-mcp.service" ];
-        before = [ "podman-dispatcharr-mcp.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-        };
-        script = ''
-          install -d -m 700 /run/dispatcharr-mcp
-          printf 'DISPATCHARR_API_KEY=%s\n' "$(cat ${cfg.dispatcharrMcp.apiKeyFile})" > /run/dispatcharr-mcp/env
-          chmod 600 /run/dispatcharr-mcp/env
-        '';
-      };
-
-      virtualisation.oci-containers.containers.dispatcharr-mcp = lib.mkIf cfg.dispatcharrMcp.enable {
-        image = "ghcr.io/crunchingcode/dispatcharr-mcp:latest";
-
-        environment = {
-          DISPATCHARR_URL = "http://127.0.0.1:9191";
-          FASTMCP_HOST = "0.0.0.0";
-        };
-
-        extraOptions = [
-          "--name=dispatcharr-mcp"
-          "--network=host"
-        ] ++ lib.optional (cfg.dispatcharrMcp.apiKeyFile != null) "--env-file=/run/dispatcharr-mcp/env";
       };
 
       ########################################
@@ -1142,8 +1089,6 @@ services.caddy = let
       allowedTCPPorts = [ 80 443 ]
         ++ lib.optionals cfg.emby.enable [ 8096 ]
         ++ lib.optionals cfg.wizarr.enable [ 5690 ]
-        ++ lib.optionals config.services.monitoring.enable [ 3000 9001 ]
-        ++ lib.optionals cfg.dispatcharrMcp.enable [ 8000 ]
         ++ lib.optionals cfg.liveSportsEpg.enable [ cfg.liveSportsEpg.listenPort ];
     };
 

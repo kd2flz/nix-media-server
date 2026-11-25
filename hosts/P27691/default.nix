@@ -38,8 +38,7 @@
     group = "root";
   };
 
-  # Dispatcharr MCP API key for the AI-control-plane container.
-  sops.secrets.dispatcharr_mcp_api_key = {
+  sops.secrets.dispatcharr_api_key = {
     mode = "0400";
     owner = "root";
     group = "root";
@@ -89,15 +88,13 @@
     jellyfin.enable       = true;
     wizarr.enable         = true;
     dispatcharr.enable    = true;
-    dispatcharrMcp.enable = true;
-    dispatcharrMcp.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
 
     dispatcharr.epgAutoMatch.enable = true;
-    dispatcharr.epgAutoMatch.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
+    dispatcharr.epgAutoMatch.apiKeyFile = config.sops.secrets.dispatcharr_api_key.path;
 
     dispatcharr.epgGrabber.enable = true;
     dispatcharr.epgSync.enable = true;
-    dispatcharr.epgSync.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
+    dispatcharr.epgSync.apiKeyFile = config.sops.secrets.dispatcharr_api_key.path;
 
     liveSportsEpg.enable      = true;
     liveSportsEpg.m3uUrlFile  = config.sops.secrets.live_sports_m3u_url.path;

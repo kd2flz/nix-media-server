@@ -335,7 +335,7 @@ Uses one M3U provider per host by design — if a host needs to aggregate multip
 - New module options go under `services.mediaServer.<name>.enable` (and friends) in `modules/media-server.nix`, then implementation in the same file's `config` block. Don't create one-module-per-service unless it's substantial — the existing module is intentionally a single grab-bag.
 - Wizarr has both an upstream NixOS module and a local podman-based fallback; the fallback is gated with `lib.mkIf (cfg.wizarr.enable && !(config.services.wizarr.enable or false))` so it disengages if upstream support lands.
 - Grafana alerts are managed declaratively under `services.grafana.provision.alerting.rules.settings` in `modules/monitoring.nix`, *not* via Prometheus Alertmanager. Datasource UID `PBFA97CFB590B2093` is hardcoded — reuse it when adding rules.
-- Grafana binds to `127.0.0.1:3000` (loopback only); Caddy proxies it externally. The default `admin_password` is a placeholder — change it via the Grafana UI or wire it to a sops secret.
+- Grafana binds to `127.0.0.1:3000` (loopback only); Caddy proxies it externally. `admin_password` and `secret_key` are read from sops secrets via Grafana file providers.
 - Media directories (`/srv/media/{music,video,audiobooks}`) are created manually one-time per host (see README), not by tmpfiles.
 
 ## Code Style
