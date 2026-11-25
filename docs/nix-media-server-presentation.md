@@ -115,9 +115,9 @@ Convention: options live under `services.<name>.<option>.enable`; modules are th
 shared 90%, host files are the 10% that differs.
 
 <!--
-[0:50] The repo map. common.nix is also where the internal NTP time servers,
-SSH hardening, admin user, and the daily Nix GC live. Point worth landing: a
-host file ends up being a page of toggles, not a system.
+[0:50] The repo map. common.nix also holds SSH hardening, the admin user, and
+the daily Nix GC. Point worth landing: a host file ends up being a page of
+toggles, not a system.
 -->
 
 ---
@@ -176,7 +176,7 @@ TLS modes:
 - **PKCS#12 wildcard** — a real cert, extracted from sops at activation:
 
 ```nix
-tls.pkcs12File         = config.sops.secrets.media_tls_pk12_bel.path;
+tls.pkcs12File         = config.sops.secrets.media_tls_pk12_<suffix>.path;
 tls.pkcs12PasswordFile = config.sops.secrets.media_tls_pk12_pass.path;
 ```
 
@@ -193,12 +193,12 @@ also effectively the access boundary — which is why Grafana/Prometheus never b
 Each host runs **comin**, which polls GitHub and applies *its own* config.
 
 ```nix
-getCominBranch = host: if host == "T29769" then "dev" else "main";
+getCominBranch = host: if host == "<sandbox-host>" then "dev" else "main";
 ```
 
 | Push to | Deploys to |
 |---------|------------|
-| `dev` | **T29769 sandbox only** |
+| `dev` | **sandbox host only** |
 | `main` | all production hosts |
 | `testing-<host>` | that host, `test` (no bootloader change) |
 
@@ -216,8 +216,8 @@ per-feature harnesses. Expectations are derived from each host's config, never
 hardcoded hostnames, so a new host is covered automatically.
 
 <!--
-[2:50] Comin is the heart of "why": T29769 is our canary, then changes promote to
-main via a PR. Auto-reboot is the piece Comin can't do — without it, kernel patches
+[2:50] Comin is the heart of "why": the sandbox is the canary, then changes promote
+to main via a PR. Auto-reboot is the piece Comin can't do — without it, kernel patches
 land in the store but never take effect until someone reboots.
 -->
 
@@ -273,8 +273,8 @@ Two opt-in external agents for enterprise visibility:
 - Host is read at *runtime*, so it never enters the Nix store
 
 <!--
-[4:15] These report into the org's tooling. KACE has no shared default on purpose:
-all hosts point at the same SMA today, but we don't want to be locked into that.
+[4:15] These report into external management tooling. KACE has no shared default
+on purpose: each host declares its own so a future site can differ.
 -->
 
 ---
@@ -323,7 +323,7 @@ the second poller.
 ## Composing it all: one host
 
 ```nix
-networking.hostName = "P27691";              # must match directory
+networking.hostName = "<host>";              # must match directory
 sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 services.monitoring.enable = true;
 services.monitoring.enableDeadManSwitch = true;
@@ -331,7 +331,7 @@ services.monitoring.deadManURLFile = config.sops.secrets.deadman_url_<host>.path
 
 services.mediaServer = {
   enable = true;
-  domainBase = "media-bel.ccistack.com";
+  domainBase = "media.<example.com>";
   gpu = "nvidia";
   jellyfin.enable = true;  # or emby.enable = true
   samba.enable = true; nanitor.enable = true; kace.enable = true;
