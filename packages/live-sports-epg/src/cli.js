@@ -16,6 +16,7 @@ async function main() {
     lookAheadDays: cfg.lookAheadDays,
     sports: cfg.sports.join(','),
     outputPath: cfg.outputPath,
+    listenHost: cfg.listenHost,
     listenPort: cfg.listenPort,
   });
 
@@ -49,7 +50,7 @@ async function main() {
 
   if (cfg.listenPort) {
     try {
-      await startHttpServer(service, { port: cfg.listenPort });
+      await startHttpServer(service, { host: cfg.listenHost, port: cfg.listenPort });
     } catch (err) {
       log.error('Failed to start HTTP server', { error: err.message });
     }
@@ -64,8 +65,6 @@ async function main() {
       log.error('Periodic refresh failed', { error: err.message });
     }
   }, cfg.refreshMinutes * 60_000);
-  // Don't keep the event loop alive just for the timer.
-  if (typeof tick.unref === 'function') tick.unref();
 
   // Graceful shutdown on SIGTERM/SIGINT.
   for (const sig of ['SIGTERM', 'SIGINT']) {

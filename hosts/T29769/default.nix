@@ -55,13 +55,4 @@
     kace.hostFile = config.sops.secrets.kace_host_t29769.path;
     kace.packageUrl = "https://github.com/kd2flz/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
   };
-
-  # Speech-to-text transcription API (whisper.cpp). Reachable at
-  # speech.t29769.community.int; set expose = "private" to keep it on
-  # loopback only.
-  services.speechToText = {
-    enable = true;
-    expose = "public";
-    model = "small.en";
-  };
 }

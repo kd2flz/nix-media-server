@@ -110,9 +110,6 @@
             ./modules/common.nix
             ./modules/media-server.nix
             ./modules/monitoring.nix
-            ./modules/ollama.nix
-            ./modules/speech-to-text.nix
-            ./modules/ai-stack.nix
             ./hosts/${host}/default.nix
             ./hosts/${host}/hardware.nix
 

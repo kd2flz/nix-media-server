@@ -9,13 +9,12 @@ let
   liveSportsEpgSrc = ../packages/live-sports-epg;
   dispatcharrEpgSyncSrc = ../packages/dispatcharr-epg-sync;
 
-  # Render a Caddy vhost with optional internal TLS (no global block required)
-  vhost = host: upstream: ''
-    ${host} {
-      ${lib.optionalString (cfg.tlsMode == "internal") "tls internal"}
-      reverse_proxy ${upstream}
-    }
-  '';
+  tlsLine =
+    if cfg.tls.certFile != null && cfg.tls.keyFile != null
+    then "tls ${cfg.tls.certFile} ${cfg.tls.keyFile}"
+    else if cfg.tlsMode == "internal"
+    then "tls internal"
+    else "";
 
   topLevelHostname = builtins.elemAt (lib.strings.splitString "." cfg.domainBase) 0;
 in
@@ -85,22 +84,6 @@ in
       description = "Enable Dispatcharr IPTV stream manager (container).";
     };
 
-    dispatcharrMcp.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Enable the Dispatcharr MCP server (AI agent control plane) on port 8000.";
-    };
-
-    dispatcharrMcp.apiKeyFile = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
-      description = ''
-        Path to a file containing the Dispatcharr API key for the MCP server.
-        Point this at config.sops.secrets.dispatcharr_mcp_api_key.path; the host
-        must declare that secret (see P27691/default.nix for the pattern).
-      '';
-    };
-
     dispatcharr.epgAutoMatch.enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -120,10 +103,9 @@ in
       default = null;
       description = ''
         Path to a file containing a Dispatcharr API key, sent as the X-API-Key
-        header. The same key used for dispatcharrMcp is fine -- point this at
-        config.sops.secrets.dispatcharr_mcp_api_key.path.
+        header. Point this at config.sops.secrets.dispatcharr_api_key.path.
       '';
-      example = lib.literalExpression "config.sops.secrets.dispatcharr_mcp_api_key.path";
+      example = lib.literalExpression "config.sops.secrets.dispatcharr_api_key.path";
     };
 
     dispatcharr.epgAutoMatch.intervalMinutes = lib.mkOption {
@@ -189,8 +171,8 @@ in
     dispatcharr.epgSync.apiKeyFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = "Dispatcharr API key file (X-API-Key). Reuse dispatcharr_mcp_api_key.";
-      example = lib.literalExpression "config.sops.secrets.dispatcharr_mcp_api_key.path";
+      description = "Dispatcharr API key file (X-API-Key). Reuse config.sops.secrets.dispatcharr_api_key.path.";
+      example = lib.literalExpression "config.sops.secrets.dispatcharr_api_key.path";
     };
 
     dispatcharr.epgSync.channelMapFile = lib.mkOption {
@@ -230,6 +212,12 @@ in
         with most IPTV providers); required when liveSportsEpg.enable = true.
       '';
       example = lib.literalExpression "config.sops.secrets.live_sports_m3u_url.path";
+    };
+
+    liveSportsEpg.listenHost = lib.mkOption {
+      type = lib.types.str;
+      default = "127.0.0.1";
+      description = "Address the live-sports-epg HTTP server binds to (loopback by default).";
     };
 
     liveSportsEpg.listenPort = lib.mkOption {
@@ -418,12 +406,8 @@ in
         message = "services.mediaServer.kace.enable = true requires kace.hostFile to be set (e.g. config.sops.secrets.kace_host_<host>.path). There is no default -- the SMA host can differ per site.";
       }
       {
-        assertion = !cfg.dispatcharrMcp.enable || cfg.dispatcharrMcp.apiKeyFile != null;
-        message = "services.mediaServer.dispatcharrMcp.enable = true requires dispatcharrMcp.apiKeyFile (config.sops.secrets.dispatcharr_mcp_api_key.path).";
-      }
-      {
         assertion = !cfg.dispatcharr.epgAutoMatch.enable || cfg.dispatcharr.epgAutoMatch.apiKeyFile != null;
-        message = "services.mediaServer.dispatcharr.epgAutoMatch.enable = true requires dispatcharr.epgAutoMatch.apiKeyFile (e.g. config.sops.secrets.dispatcharr_mcp_api_key.path).";
+        message = "services.mediaServer.dispatcharr.epgAutoMatch.enable = true requires dispatcharr.epgAutoMatch.apiKeyFile (e.g. config.sops.secrets.dispatcharr_api_key.path).";
       }
       {
         assertion = !cfg.liveSportsEpg.enable || cfg.liveSportsEpg.m3uUrlFile != null;
@@ -431,7 +415,7 @@ in
       }
       {
         assertion = !cfg.dispatcharr.epgSync.enable || cfg.dispatcharr.epgSync.apiKeyFile != null;
-        message = "services.mediaServer.dispatcharr.epgSync.enable = true requires dispatcharr.epgSync.apiKeyFile (reuse config.sops.secrets.dispatcharr_mcp_api_key.path).";
+        message = "services.mediaServer.dispatcharr.epgSync.enable = true requires dispatcharr.epgSync.apiKeyFile (reuse config.sops.secrets.dispatcharr_api_key.path).";
       }
       {
         assertion = !cfg.dispatcharr.epgGrabber.enable || cfg.dispatcharr.epgGrabber.port > 0;
@@ -465,13 +449,17 @@ in
       })
     ];
 
-    # Enable Jellyfin's Prometheus metrics endpoint by flipping <EnableMetrics> in system.xml.
-    # On first start the file doesn't exist yet, so guard with -f; metrics get enabled on the
-    # next restart after Jellyfin generates its config.
+    # Enable Jellyfin's Prometheus metrics endpoint in system.xml. Older configs
+    # have `<EnableMetrics>false</EnableMetrics>` to flip; fresh installs can omit
+    # the element entirely, so insert it before Jellyfin starts.
     systemd.services.jellyfin = lib.mkIf cfg.jellyfin.enable {
       preStart = ''
         if [ -f /var/lib/jellyfin/config/system.xml ]; then
-          ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
+          if ${pkgs.gnugrep}/bin/grep -q '<EnableMetrics>' /var/lib/jellyfin/config/system.xml; then
+            ${pkgs.gnused}/bin/sed -i 's|<EnableMetrics>false</EnableMetrics>|<EnableMetrics>true</EnableMetrics>|g' /var/lib/jellyfin/config/system.xml
+          else
+            ${pkgs.gnused}/bin/sed -i 's|</Server>|  <EnableMetrics>true</EnableMetrics>\n</Server>|' /var/lib/jellyfin/config/system.xml
+          fi
         fi
       '';
     };
@@ -543,104 +531,7 @@ in
       path = with pkgs; [ python3 ];
       serviceConfig = {
         LoadCredential = "apikey:${cfg.emby.apiKeyFile}";
-        ExecStart = "${pkgs.python3}/bin/python3 ${pkgs.writeText "emby-exporter.py" ''
-import json, os, sys, time, urllib.request
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from threading import Thread
-
-API_KEY_FILE = os.path.join(os.environ["CREDENTIALS_DIRECTORY"], "apikey")
-API_KEY = open(API_KEY_FILE).read().strip()
-EMBY_HOST, EMBY_PORT, LISTEN_PORT = "127.0.0.1", 8096, 8097
-POLL_INTERVAL = 15
-METRICS = {"sessions": 0, "playing": 0, "transcoding": 0, "hw_decode": 0, "hw_encode": 0, "details": []}
-
-def fetch():
-    url = f"http://{EMBY_HOST}:{EMBY_PORT}/emby/Sessions?api_key={API_KEY}"
-    try:
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        return json.loads(urllib.request.urlopen(req, timeout=10).read())
-    except Exception:
-        return None
-
-def poll():
-    s = fetch()
-    if s is None:
-        for k in ("sessions", "playing", "transcoding", "hw_decode", "hw_encode"):
-            METRICS[k] = 0
-        METRICS["details"] = []
-        return
-    METRICS["sessions"] = len(s)
-    playing = transcoding = hw_decode = hw_encode = 0
-    details = []
-    for sess in s:
-        u = sess.get("UserName", "?")
-        d = sess.get("DeviceName", "?")
-        c = sess.get("Client", "?")
-        di = sess.get("DeviceId", "?")
-        np = sess.get("NowPlayingItem")
-        is_p = 1 if np else 0
-        is_t = is_hwd = is_hwe = 0
-        if np:
-            playing += 1
-            ti = sess.get("TranscodingInfo")
-            if ti:
-                transcoding += 1
-                if ti.get("HardwareDecoding") and ti["HardwareDecoding"] != "None":
-                    hw_decode += 1; is_hwd = 1
-                if ti.get("IsVideoDirectEncode") is False:
-                    hw_encode += 1; is_hwe = 1
-        details.append({"user": u, "device": d, "client": c, "device_id": di, "playing": is_p, "transcoding": is_t, "hwd": is_hwd, "hwe": is_hwe})
-    METRICS.update({"playing": playing, "transcoding": transcoding, "hw_decode": hw_decode, "hw_encode": hw_encode, "details": details})
-
-def render():
-    m = METRICS
-    lines = [
-        "# HELP emby_sessions_total Active Emby sessions",
-        "# TYPE emby_sessions_total gauge",
-        f"emby_sessions_total {m['sessions']}",
-        "",
-        "# HELP emby_sessions_playing Sessions playing media",
-        "# TYPE emby_sessions_playing gauge",
-        f"emby_sessions_playing {m['playing']}",
-        "",
-        "# HELP emby_sessions_transcoding Sessions being transcoded",
-        "# TYPE emby_sessions_transcoding gauge",
-        f"emby_sessions_transcoding {m['transcoding']}",
-        "",
-        "# HELP emby_sessions_hw_decode Sessions using hardware decode",
-        "# TYPE emby_sessions_hw_decode gauge",
-        f"emby_sessions_hw_decode {m['hw_decode']}",
-        "",
-        "# HELP emby_sessions_hw_encode Sessions using hardware encode",
-        "# TYPE emby_sessions_hw_encode gauge",
-        f"emby_sessions_hw_encode {m['hw_encode']}",
-        "",
-    ]
-    for d in m["details"]:
-        lbl = f'user="{d["user"]}",device="{d["device"]}",client="{d["client"]}",device_id="{d["device_id"]}"'
-        lines.append(f'emby_session_info{{{lbl}}} 1')
-    lines.append("")
-    return "\n".join(lines)
-
-class H(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == "/metrics":
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(render().encode())
-        else:
-            self.send_response(404)
-            self.end_headers()
-    def log_message(self, *a): pass
-
-def poll_loop():
-    while True:
-        poll()
-        time.sleep(POLL_INTERVAL)
-Thread(target=poll_loop, daemon=True).start()
-HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
-''}";
+        ExecStart = "${pkgs.python3}/bin/python3 ${pkgs.writeText "emby-exporter.py" (builtins.readFile ../packages/emby-exporter/emby-exporter.py)}";
         Restart = "always";
         RestartSec = "5s";
         DynamicUser = true;
@@ -899,44 +790,12 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
         };
       };
       ########################################
-      # Dispatcharr MCP server (optional)
+      # Dispatcharr API key
       ########################################
-      sops.secrets.dispatcharr_mcp_api_key = lib.mkIf cfg.dispatcharrMcp.enable {
+      sops.secrets.dispatcharr_api_key = lib.mkIf (cfg.dispatcharr.epgAutoMatch.enable || cfg.dispatcharr.epgSync.enable) {
         mode = "0400";
         owner = "root";
         group = "root";
-      };
-
-      # Render the API key into an env file read by the container at startup.
-      # The MCP image only accepts DISPATCHARR_API_KEY as a plain env var, so we
-      # derive it from the sops-decrypted secret instead of baking it into the store.
-      systemd.services.dispatcharr-mcp-env = lib.mkIf (cfg.dispatcharrMcp.enable && cfg.dispatcharrMcp.apiKeyFile != null) {
-        description = "Render Dispatcharr MCP env file from sops secret";
-        requiredBy = [ "podman-dispatcharr-mcp.service" ];
-        before = [ "podman-dispatcharr-mcp.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-        };
-        script = ''
-          install -d -m 700 /run/dispatcharr-mcp
-          printf 'DISPATCHARR_API_KEY=%s\n' "$(cat ${cfg.dispatcharrMcp.apiKeyFile})" > /run/dispatcharr-mcp/env
-          chmod 600 /run/dispatcharr-mcp/env
-        '';
-      };
-
-      virtualisation.oci-containers.containers.dispatcharr-mcp = lib.mkIf cfg.dispatcharrMcp.enable {
-        image = "ghcr.io/crunchingcode/dispatcharr-mcp:latest";
-
-        environment = {
-          DISPATCHARR_URL = "http://127.0.0.1:9191";
-          FASTMCP_HOST = "0.0.0.0";
-        };
-
-        extraOptions = [
-          "--name=dispatcharr-mcp"
-          "--network=host"
-        ] ++ lib.optional (cfg.dispatcharrMcp.apiKeyFile != null) "--env-file=/run/dispatcharr-mcp/env";
       };
 
       ########################################
@@ -983,6 +842,7 @@ HTTPServer(("127.0.0.1", LISTEN_PORT), H).serve_forever()
         environment = {
           OUTPUT_PATH = "/var/lib/live-sports-epg/epg.xml";
           CACHE_DIR = "/var/cache/live-sports-epg";
+          LISTEN_HOST = cfg.liveSportsEpg.listenHost;
           LISTEN_PORT = toString cfg.liveSportsEpg.listenPort;
           REFRESH_MINUTES = toString cfg.liveSportsEpg.refreshMinutes;
           LOOK_AHEAD_DAYS = toString cfg.liveSportsEpg.lookAheadDays;
@@ -1085,12 +945,7 @@ services.nanitor-agent = lib.mkIf cfg.nanitor.enable {
     ########################################
 
 
-services.caddy = let
-      tlsLine =
-        if cfg.tls.certFile != null && cfg.tls.keyFile != null
-        then "tls ${cfg.tls.certFile} ${cfg.tls.keyFile}"
-        else "tls internal";
-    in {
+    services.caddy = {
       enable = true;
       resume = false;
 
@@ -1142,8 +997,6 @@ services.caddy = let
       allowedTCPPorts = [ 80 443 ]
         ++ lib.optionals cfg.emby.enable [ 8096 ]
         ++ lib.optionals cfg.wizarr.enable [ 5690 ]
-        ++ lib.optionals config.services.monitoring.enable [ 3000 9001 ]
-        ++ lib.optionals cfg.dispatcharrMcp.enable [ 8000 ]
         ++ lib.optionals cfg.liveSportsEpg.enable [ cfg.liveSportsEpg.listenPort ];
     };
 

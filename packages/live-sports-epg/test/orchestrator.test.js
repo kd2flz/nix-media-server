@@ -64,4 +64,35 @@ describe('EpgService fallback', () => {
     assert.equal(result.degraded, true);
     assert.equal(result.xmltv, CACHED);
   });
+
+  it('uses the canonical sport key for default duration, not the ESPN league name', async () => {
+    const service = await makeService();
+    service._fetchM3U = async () => [
+      '#EXTM3U',
+      '#EXTINF:-1 tvg-id="Lions @ Colts-A" group-title="Live-Games",Lions @ Colts-A',
+      'https://stream/lions-colts.m3u8',
+    ].join('\n');
+    service._loadSchedule = async () => ({
+      events: [{
+        id: 'nfl-1',
+        sport: { key: 'NFL', label: 'NFL' },
+        league: 'National Football League',
+        startTime: '2026-08-29T00:20:00Z',
+        endTime: null,
+        away: { name: 'Detroit Lions', abbreviation: 'DET' },
+        home: { name: 'Indianapolis Colts', abbreviation: 'IND' },
+        status: { state: 'pre', detail: '' },
+      }],
+      failures: [],
+    });
+
+    const result = await service.runOnce();
+
+    assert.equal(result.stats.matched, 1);
+    assert.match(
+      result.xmltv,
+      /<programme start="20260829002000 \+0000" stop="20260829035000 \+0000" channel="Lions @ Colts-A">/,
+      'NFL default duration should be 210 minutes regardless of league display name',
+    );
+  });
 });

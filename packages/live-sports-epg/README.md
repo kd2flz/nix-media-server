@@ -77,7 +77,8 @@ environment variables:
 | `refreshMinutes` / `REFRESH_MINUTES` | `5` | M3U + schedule refresh interval |
 | `lookAheadDays` / `LOOK_AHEAD_DAYS` | `7` | How many days of ESPN data to fetch |
 | `sports` / `SPORTS` | all | Comma-separated list of sport keys (see `src/types/sports.js`) |
-| `listenPort` / `LISTEN_PORT` | `0` | If > 0, serve the EPG on `http://0.0.0.0:<port>/epg.xml` |
+| `listenHost` / `LISTEN_HOST` | `127.0.0.1` | Address for the optional HTTP server |
+| `listenPort` / `LISTEN_PORT` | `0` | If > 0, serve the EPG on `http://<listenHost>:<port>/epg.xml` |
 | `logLevel` / `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
 | `cacheDir` / `CACHE_DIR` | `/var/cache/live-sports-epg` | JSON cache root |
 | `fetchTimeoutMs` / `FETCH_TIMEOUT_MS` | `10000` | Per-request HTTP timeout |

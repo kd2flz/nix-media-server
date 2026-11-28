@@ -38,8 +38,7 @@
     group = "root";
   };
 
-  # Dispatcharr MCP API key for the AI-control-plane container.
-  sops.secrets.dispatcharr_mcp_api_key = {
+  sops.secrets.dispatcharr_api_key = {
     mode = "0400";
     owner = "root";
     group = "root";
@@ -58,8 +57,6 @@
     owner = "root";
     group = "root";
   };
-
-  # Speech-to-text (whisper.cpp) now fronts via Open WebUI; no public basic auth required.
 
   services.monitoring.enable = true;
 
@@ -91,15 +88,13 @@
     jellyfin.enable       = true;
     wizarr.enable         = true;
     dispatcharr.enable    = true;
-    dispatcharrMcp.enable = true;
-    dispatcharrMcp.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
 
     dispatcharr.epgAutoMatch.enable = true;
-    dispatcharr.epgAutoMatch.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
+    dispatcharr.epgAutoMatch.apiKeyFile = config.sops.secrets.dispatcharr_api_key.path;
 
     dispatcharr.epgGrabber.enable = true;
     dispatcharr.epgSync.enable = true;
-    dispatcharr.epgSync.apiKeyFile = config.sops.secrets.dispatcharr_mcp_api_key.path;
+    dispatcharr.epgSync.apiKeyFile = config.sops.secrets.dispatcharr_api_key.path;
 
     liveSportsEpg.enable      = true;
     liveSportsEpg.m3uUrlFile  = config.sops.secrets.live_sports_m3u_url.path;
@@ -113,39 +108,10 @@
     kace.packageUrl = "https://github.com/kd2flz/resources/releases/download/15.1.45/ampagent-15.1.45.ubuntu.64.tar.gz";
   };
 
-  # Speech-to-text transcription API (whisper.cpp). Bound to loopback for
-  # Open WebUI integration; exposed via ai.media-bel.ccistack.com (Open WebUI).
-  # Inference is CPU-only, so keep the model small on this box.
-  services.speechToText = {
-    enable = true;
-    expose = "private";
-    host = "127.0.0.1";
-    port = 8080;
-    model = "small.en";
-    requestPath = "/v1/audio";
-    inferencePath = "/transcriptions";
-  };
-
-  # Unified AI frontend (Open WebUI) wiring Ollama + whisper.cpp
-  services.aiStack = {
-    enable = true;
-    # domainBase defaults to ai.media-bel.ccistack.com from mediaServer.domainBase
-  };
-
-  # Quadro P2200 is Pascal (SM 6.1). The nixpkgs default CUDA build targets
-  # sm_75+ (Turing and newer), so the llama runner crashes immediately on this
-  # card. Adding sm_61 here causes ollama-cuda to be recompiled with a kernel
-  # that runs on Pascal. This is a host-level concern, not a module option.
   nixpkgs.config.cudaCapabilities = [ "6.1" "7.5" "8.0" "8.6" ];
 
   # Quadro P2200 is Pascal (SM 6.1) — requires legacy driver (same as media-hws).
   hardware.nvidia.package = lib.mkForce config.boot.kernelPackages.nvidiaPackages.legacy_580;
-
-  services.ollamaServer = {
-    enable       = true;
-    acceleration = "cuda";
-    models       = [ "hf.co/hesamation/Qwen3.6-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-GGUF:Q4_K_M" ];
-  };
 
 # Monthly integrity check across both RAID1 SSDs
   services.btrfs.autoScrub = {

@@ -79,12 +79,6 @@ describe('integration', () => {
     assert.equal(matches.size, 4, 'all 4 live streams should match');
 
      const xml = renderXmltv(live, matches, {
-       sportByName: {
-         'Reds @ Cubs-A': 'MLB',
-         'Reds @ Cubs-H': 'MLB',
-         'Red Sox @ Yankees-A': 'MLB',
-         'Lions @ Colts': 'NFL',
-       },
        defaultDurations: { MLB: 195, NFL: 210 },
      });
 

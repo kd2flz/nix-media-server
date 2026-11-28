@@ -22,6 +22,7 @@ for host in $hosts; do
     c:
     let
       has = s: sub: builtins.match (".*" + sub + ".*") s != null;
+      prefix = p: s: builtins.substring 0 (builtins.stringLength p) s == p;
       b = x: if x then "yes" else "no";
       ms = c.services.mediaServer;
       mon = c.services.monitoring;
@@ -29,13 +30,18 @@ for host in $hosts; do
       epg = ms.liveSportsEpg.enable && ms.liveSportsEpg.listenPort > 0;
       disp = ms.dispatcharr.enable;
       grab = ms.dispatcharr.epgGrabber.enable && ms.dispatcharr.epgGrabber.port > 0;
-      sync = ms.dispatcharr.epgSync.enable;
-      deadman = mon.enableDeadManSwitch && mon.deadManURL != "";
-      jobs = builtins.toJSON (map (s: s.job_name) c.services.prometheus.scrapeConfigs);
-      rules = builtins.toJSON c.services.grafana.provision.alerting.rules.settings;
+       sync = ms.dispatcharr.epgSync.enable;
+       deadman = mon.enableDeadManSwitch && mon.deadManURLFile != null;
+       embyExp = ms.emby.enable && ms.emby.apiKeyFile != null;
+       jobs = builtins.toJSON (map (s: s.job_name) c.services.prometheus.scrapeConfigs);
+
+       rules = builtins.toJSON c.services.grafana.provision.alerting.rules.settings;
+
       svc = c.systemd.services;
       tim = c.systemd.timers;
       containers = c.virtualisation.oci-containers.containers;
+      ports = c.networking.firewall.allowedTCPPorts;
+      grafanaSecurity = c.services.grafana.settings.security;
       row = name: want: got: "${name}\t${b want}\t${b got}\n";
     in
       row "dispatcharr probe"        disp    (has jobs "\"dispatcharr\"")
@@ -45,13 +51,31 @@ for host in $hosts; do
       + row "epg grabber container"  grab    (containers ? "iptv-org-epg")
       + row "epg grabber probe"      grab    (has jobs "\"iptv-org-epg\"")
       + row "epg grabber alert"      grab    (has rules "\"uid\":\"iptv-org-epg-down\"")
-      + row "epg sync service"       sync    (svc ? "dispatcharr-epg-sync")
-      + row "epg sync timer"         sync    (tim ? "dispatcharr-epg-sync")
-      + row "nvidia check service"   nvidia  (svc ? "nvidia-driver-check")
+       + row "epg sync service"       sync    (svc ? "dispatcharr-epg-sync")
+       + row "epg sync timer"         sync    (tim ? "dispatcharr-epg-sync")
+       + row "live-sports loopback"   epg     (svc ? "live-sports-epg" && svc."live-sports-epg".environment.LISTEN_HOST == "127.0.0.1")
+       + row "jellyfin metrics fix"   ms.jellyfin.enable (has (svc.jellyfin.preStart or "") "<EnableMetrics>true</EnableMetrics>")
+       + row "emby exporter service"  embyExp (svc ? "emby-exporter")
+       + row "nvidia check service"   nvidia  (svc ? "nvidia-driver-check")
+
+
       + row "nvidia check timer"     nvidia  (tim ? "nvidia-driver-check")
       + row "nvidia alert"           nvidia  (has rules "\"uid\":\"nvidia-driver-mismatch\"")
       + row "deadman-ping service"   deadman (svc ? "deadman-ping")
       + row "deadman-ping timer"     deadman (tim ? "deadman-ping")
+      + row "speech probe removed"   false   (has jobs "\"speech-to-text\"")
+      + row "speech alert removed"   false   (has rules "\"uid\":\"speech-to-text-down\"")
+      + row "speech service removed" false   (svc ? "speech-to-text")
+      + row "speech auth env removed" false  (svc ? "speech-to-text-auth-env")
+      + row "ollama service removed" false   (svc ? "ollama")
+      + row "open-webui removed"     false   (containers ? "open-webui")
+      + row "mcp container removed"  false   (containers ? "dispatcharr-mcp")
+      + row "mcp env removed"        false   (svc ? "dispatcharr-mcp-env")
+      + row "mcp port closed"        false   (builtins.elem 8000 ports)
+      + row "monitoring ports closed" false  (builtins.any (p: builtins.elem p [ 3000 9001 9093 ]) ports)
+      + row "alertmanager loopback"  mon.enable (c.services.prometheus.alertmanager.listenAddress == "127.0.0.1")
+      + row "grafana admin from file" mon.enable (prefix "$__file{" grafanaSecurity.admin_password)
+      + row "grafana key from file"  mon.enable (prefix "$__file{" grafanaSecurity.secret_key)
   ' 2>/dev/null)"
 
   while IFS=$'\t' read -r name want got; do

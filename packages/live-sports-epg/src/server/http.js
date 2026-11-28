@@ -8,10 +8,10 @@ import { log } from '../log/logger.js';
  * small status blob on /status. Intended for the Dispatcharr container to
  * pull from (or for direct browser access during debugging).
  *
- * No auth — bind to localhost by default, or rely on the NixOS module
- * to keep it on a private interface.
+ * No auth — bind to loopback by default. Callers can opt into a wider bind
+ * address explicitly via `host`.
  */
-export function startHttpServer(service, { port }) {
+export function startHttpServer(service, { host = '127.0.0.1', port } = {}) {
   if (!port || port <= 0) return null;
 
   const server = http.createServer((req, res) => {
@@ -41,8 +41,8 @@ export function startHttpServer(service, { port }) {
 
   return new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(port, '0.0.0.0', () => {
-      log.info('HTTP server listening', { port });
+    server.listen(port, host, () => {
+      log.info('HTTP server listening', { host, port });
       resolve(server);
     });
   });

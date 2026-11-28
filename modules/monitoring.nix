@@ -7,9 +7,10 @@ in
   options.services.monitoring = {
     enable = lib.mkEnableOption "Prometheus + Grafana + exporters";
     enableDeadManSwitch = lib.mkEnableOption "Dead-man-switch timer (pings a URL)";
-    deadManURL = lib.mkOption {
-      type = lib.types.str; default = "";
-      description = "Heartbeat URL to ping (e.g., Healthchecks.io).";
+    deadManURLFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Path to a file containing the heartbeat URL to ping.";
     };
   };
 
@@ -194,20 +195,6 @@ in
             { target_label = "__address__"; replacement = "127.0.0.1:9115"; }
           ];
         }
-      ] ++ lib.optionals (config.services.speechToText.enable or false) [
-        {
-          job_name = "speech-to-text";
-          metrics_path = "/probe";
-          params = { module = [ "http_2xx" ]; };
-          static_configs = [
-            { targets = [ "http://127.0.0.1:${toString config.services.speechToText.port}/health" ]; }
-          ];
-          relabel_configs = [
-            { source_labels = [ "__address__" ]; target_label = "__param_target"; }
-            { source_labels = [ "__param_target" ]; target_label = "instance"; }
-            { target_label = "__address__"; replacement = "127.0.0.1:9115"; }
-          ];
-        }
       ];
     };
 
@@ -216,6 +203,7 @@ in
     #############################################
     services.prometheus.alertmanager = {
       enable = true;
+      listenAddress = "127.0.0.1";
       port = 9093;
       configuration = lib.mkForce {
         global = { };
@@ -235,6 +223,16 @@ in
     #############################################
     # Grafana
     #############################################
+    sops.secrets.grafana_admin_password = {
+      mode = "0440";
+      owner = "root";
+      group = "grafana";
+    };
+    sops.secrets.grafana_secret_key = {
+      mode = "0440";
+      owner = "root";
+      group = "grafana";
+    };
     services.grafana = {
       enable = true;
       settings = {
@@ -246,8 +244,8 @@ in
         };
         security = {
           admin_user = "admin";
-          admin_password = "admin";
-          secret_key = "SW2YcwTIb9zpOOhoPsMm";
+          admin_password = "$__file{${config.sops.secrets.grafana_admin_password.path}}";
+          secret_key = "$__file{${config.sops.secrets.grafana_secret_key.path}}";
         };
       };
 
@@ -670,40 +668,6 @@ in
                 };
                 labels = { severity = "critical"; };
               }
-              {
-                uid = "speech-to-text-down";
-                title = "Speech-to-Text Down";
-                condition = "A";
-                data = [{
-                  refId = "A";
-                  relativeTimeRange = {
-                    from = 120;
-                    to = 0;
-                  };
-                  datasourceUid = "PBFA97CFB590B2093";
-                  model = {
-                    datasource = {
-                      type = "prometheus";
-                      uid = "PBFA97CFB590B2093";
-                    };
-                    expr = "probe_success{job=\"speech-to-text\"} == 0";
-                    instant = true;
-                    interval = null;
-                    intervalMs = 15000;
-                    maxDataPoints = 43200;
-                    range = false;
-                    refId = "A";
-                  };
-                }];
-                noDataState = "NoData";
-                execErrState = "Alerting";
-                for = "2m";
-                annotations = {
-                  summary = "Speech-to-text is down";
-                  description = "Speech-to-text has been unavailable for 2 minutes";
-                };
-                labels = { severity = "critical"; };
-              }
             ] ++ lib.optionals (mediaCfg.dispatcharr.enable or false) [
               {
                 uid = "dispatcharr-down";
@@ -870,24 +834,21 @@ in
     #############################################
     # Dead-man switch (optional)
     #############################################
-    systemd.services.deadman-ping = lib.mkIf (cfg.enableDeadManSwitch && cfg.deadManURL != "") {
+    systemd.services.deadman-ping = lib.mkIf (cfg.enableDeadManSwitch && cfg.deadManURLFile != null) {
       description = "Dead-man switch ping";
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.curl}/bin/curl -fsS ${cfg.deadManURL}";
+        ExecStart = "${pkgs.writeShellScript "deadman-ping" ''
+          exec ${pkgs.curl}/bin/curl -fsS "$(cat ${cfg.deadManURLFile})"
+        ''}";
       };
     };
-    systemd.timers.deadman-ping = lib.mkIf (cfg.enableDeadManSwitch && cfg.deadManURL != "") {
+    systemd.timers.deadman-ping = lib.mkIf (cfg.enableDeadManSwitch && cfg.deadManURLFile != null) {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "*:*:30";
         Persistent = true;
       };
     };
-
-    #############################################
-    # Firewall
-    #############################################
-    networking.firewall.allowedTCPPorts = [ 3000 9001 9093 ];
   };
 }

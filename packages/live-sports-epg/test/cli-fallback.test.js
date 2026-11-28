@@ -59,6 +59,16 @@ function waitForExit(child, timeoutMs = 10_000) {
   });
 }
 
+async function stopChild(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  child.kill('SIGTERM');
+  await waitForExit(child);
+}
+
+function waitMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function waitForEpg(port, timeoutMs = 10_000) {
   const deadline = Date.now() + timeoutMs;
   let lastErr;
@@ -133,5 +143,21 @@ describe('cli startup fallback', () => {
     const { code } = await waitForExit(child);
     assert.notEqual(code, 0);
     assert.doesNotMatch(out.stdout, /Seeded EPG fallback/);
+  });
+
+  it('stays alive for periodic refreshes when HTTP is disabled', { timeout: 20_000 }, async () => {
+    const tmp = await tempDir();
+    const env = await baseEnv(tmp, { LISTEN_PORT: '0' });
+    await fs.mkdir(path.dirname(env.OUTPUT_PATH), { recursive: true });
+    await fs.writeFile(env.OUTPUT_PATH, CACHED);
+
+    const { child, out } = startCli(env);
+    try {
+      await waitMs(2_000);
+      assert.equal(child.exitCode, null, 'refresh timer should keep the process alive');
+      assert.match(out.stdout, /Seeded EPG fallback from existing output/);
+    } finally {
+      await stopChild(child);
+    }
   });
 });

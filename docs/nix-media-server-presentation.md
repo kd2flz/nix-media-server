@@ -105,8 +105,6 @@ modules/
   common.nix       # SSH, admin user, Podman, GC, auto-reboot, time servers
   media-server.nix # services.mediaServer.* — the big option tree
   monitoring.nix   # Prometheus, Grafana, exporters, alert rules
-  ollama.nix       # optional local LLM inference
-  speech-to-text.nix # optional transcription API (whisper.cpp)
 hosts/<host>/
   default.nix      # site-specific toggles only (tiny)
   hardware.nix     # disks, filesystems, bootloader
@@ -117,9 +115,9 @@ Convention: options live under `services.<name>.<option>.enable`; modules are th
 shared 90%, host files are the 10% that differs.
 
 <!--
-[0:50] The repo map. common.nix is also where the internal NTP time servers,
-SSH hardening, admin user, and the daily Nix GC live. Point worth landing: a
-host file ends up being a page of toggles, not a system.
+[0:50] The repo map. common.nix also holds SSH hardening, the admin user, and
+the daily Nix GC. Point worth landing: a host file ends up being a page of
+toggles, not a system.
 -->
 
 ---
@@ -178,7 +176,7 @@ TLS modes:
 - **PKCS#12 wildcard** — a real cert, extracted from sops at activation:
 
 ```nix
-tls.pkcs12File         = config.sops.secrets.media_tls_pk12_bel.path;
+tls.pkcs12File         = config.sops.secrets.media_tls_pk12_<suffix>.path;
 tls.pkcs12PasswordFile = config.sops.secrets.media_tls_pk12_pass.path;
 ```
 
@@ -195,12 +193,12 @@ also effectively the access boundary — which is why Grafana/Prometheus never b
 Each host runs **comin**, which polls GitHub and applies *its own* config.
 
 ```nix
-getCominBranch = host: if host == "T29769" then "dev" else "main";
+getCominBranch = host: if host == "<sandbox-host>" then "dev" else "main";
 ```
 
 | Push to | Deploys to |
 |---------|------------|
-| `dev` | **T29769 sandbox only** |
+| `dev` | **sandbox host only** |
 | `main` | all production hosts |
 | `testing-<host>` | that host, `test` (no bootloader change) |
 
@@ -218,8 +216,8 @@ per-feature harnesses. Expectations are derived from each host's config, never
 hardcoded hostnames, so a new host is covered automatically.
 
 <!--
-[2:50] Comin is the heart of "why": T29769 is our canary, then changes promote to
-main via a PR. Auto-reboot is the piece Comin can't do — without it, kernel patches
+[2:50] Comin is the heart of "why": the sandbox is the canary, then changes promote
+to main via a PR. Auto-reboot is the piece Comin can't do — without it, kernel patches
 land in the store but never take effect until someone reboots.
 -->
 
@@ -250,7 +248,7 @@ a future host may be a different site/organization, so we don't share keys by de
 
 ```nix
 services.monitoring.enableDeadManSwitch = true;
-services.monitoring.deadManURL = "https://hc-ping.com/<uuid>";
+services.monitoring.deadManURLFile = config.sops.secrets.deadman_url_<host>.path;
 ```
 
 A timer pings Healthchecks.io every minute; if the pings stop, the *absence* alerts you.
@@ -275,8 +273,8 @@ Two opt-in external agents for enterprise visibility:
 - Host is read at *runtime*, so it never enters the Nix store
 
 <!--
-[4:15] These report into the org's tooling. KACE has no shared default on purpose:
-all hosts point at the same SMA today, but we don't want to be locked into that.
+[4:15] These report into external management tooling. KACE has no shared default
+on purpose: each host declares its own so a future site can differ.
 -->
 
 ---
@@ -290,8 +288,6 @@ all hosts point at the same SMA today, but we don't want to be locked into that.
 | **Wizarr** | Invites / onboarding | :5690 |
 | **Dispatcharr** | IPTV stream manager | Podman · :9191 |
 | **live-sports-epg** | Sports XMLTV generator | Node systemd · :8098 |
-| **Ollama** | Local LLM inference | native · :11434 |
-| **Speech-to-Text** | Transcription API (audio/video → text) | native · :8080 |
 
 `jellyfin.enable` and `emby.enable` are **mutually exclusive** (enforced by an assertion).
 
@@ -306,13 +302,12 @@ driver and matched CUDA capabilities.
 
 ---
 
-## Dispatcharr, EPG & the AI control plane
+## Dispatcharr, EPG & reconciliation
 
 - **Dispatcharr** manages IPTV sources, channels, EPG, and VOD — containerized
 - **EPG auto-match** timer keeps new channels mapped (default: every 15 min)
 - **live-sports-epg** reads *Dispatcharr's own* M3U, matches games against ESPN's free API
   (team aliases + fuzzy matching), and emits XMLTV with logos and "Upcoming:" placeholders
-- **Dispatcharr MCP** (:8000): an AI agent control plane, API key from sops
 
 > Lesson learned: never let two clients poll one IPTV provider concurrently —
 > throttled/truncated responses can wipe channel groups.
@@ -325,37 +320,18 @@ the second poller.
 
 ---
 
-## Speech-to-text, on demand
-
-- **whisper.cpp** HTTP server — audio/video in, text out. `POST /inference`, `GET /health`
-- **Nothing is scanned.** The API transcribes only what you send it — the media library is never crawled
-- **Model = a Nix store path.** `ggml-small.en.bin`, hash-verified at build time, fetched into the store
-- **Exposed through Caddy** at `speech.<domainBase>`, or kept private on loopback (`expose = "private"`)
-- **Basic auth from sops** — `basicAuth.hashFile` renders the bcrypt hash into a `/run` env file, never the Nix store
-- **Hardened unit**: loopback bind, `ProtectSystem=strict`, no capabilities, private `/tmp`
-
-> CPU-only: `small.en` runs ~1–3x realtime. GPU whisper would need a CUDA rebuild — out of scope.
-
-<!--
-[5:35] Deliberately pull-based. The tempting version of this feature is a nightly job
-that transcribes everything in the library; that is a different product with different
-cost, storage, and privacy characteristics. Here the module only provides the API.
--->
-
----
-
 ## Composing it all: one host
 
 ```nix
-networking.hostName = "P27691";              # must match directory
+networking.hostName = "<host>";              # must match directory
 sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 services.monitoring.enable = true;
 services.monitoring.enableDeadManSwitch = true;
-services.monitoring.deadManURL = "https://hc-ping.com/…";
+services.monitoring.deadManURLFile = config.sops.secrets.deadman_url_<host>.path;
 
 services.mediaServer = {
   enable = true;
-  domainBase = "media-bel.ccistack.com";
+  domainBase = "media.<example.com>";
   gpu = "nvidia";
   jellyfin.enable = true;  # or emby.enable = true
   samba.enable = true; nanitor.enable = true; kace.enable = true;
